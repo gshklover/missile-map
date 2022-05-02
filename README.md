@@ -1,5 +1,5 @@
 # missile-map
-Crowd-sourced guided missile warning system
+Crowd-sourced cruise missile warning system
 
 **Goal:**<br>
   Provide crowd-sourced **warning system against cruise missile attacks** over populated areas.
