@@ -1,4 +1,4 @@
-package com.example.testlocation
+package com.example.missilemap
 
 import org.junit.Test
 

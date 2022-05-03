@@ -1,4 +1,4 @@
-package com.example.testlocation
+package com.example.missilemap
 
 import android.Manifest
 import android.content.Context
@@ -15,13 +15,24 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 
+import com.google.android.gms.maps.GoogleMap
+
+
 /**
  * Main application activity
  */
 class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener {
 
-    // text field that displays the location
-    private var mTextView: TextView? = null
+    // visual elements:
+    private var mTextView: TextView? = null        // text field that displays the location
+
+    // sensor readings:
+    private val mGravity = FloatArray(3) { _ -> 0.0f }      // current accelerometer reading
+    private val mGeomagnetic = FloatArray(3) { _ -> 0.0f }  // current magnetic sensor reading
+    private var mLocation : Location? = null
+
+    // computed values:
+    private val mRotation = FloatArray(9)     // current rotation matrix
 
     // called when the activity is first created
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -63,9 +74,8 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener 
 
     // called by LocationManager when location changes
     override fun onLocationChanged(location: Location) {
-        mTextView?.setText(
-            location.longitude.toFloat().toString() + " " + location.latitude.toFloat().toString()
-        )
+        mLocation = location
+        updateText()
     }
 
     // called by permissions manager to process permission change request
@@ -92,11 +102,65 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener 
         }
     }
 
+    // called when one of the sensors (magnetic/accelerometer) changes
     override fun onSensorChanged(sensorEvent: SensorEvent?) {
-        TODO("Not yet implemented")
+        when (sensorEvent?.sensor?.type) {
+            Sensor.TYPE_ACCELEROMETER -> {
+                mGravity[0] = sensorEvent.values[0]
+                mGravity[1] = sensorEvent.values[1]
+                mGravity[2] = sensorEvent.values[2]
+            }
+            Sensor.TYPE_MAGNETIC_FIELD -> {
+                mGeomagnetic[0] = sensorEvent.values[0]
+                mGeomagnetic[1] = sensorEvent.values[1]
+                mGeomagnetic[2] = sensorEvent.values[2]
+            }
+            else -> return
+        }
+        updatedOrientation()
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        TODO("Not yet implemented")
+    // update orientation based on sensor data
+    private fun updatedOrientation() {
+        val rotation = FloatArray(9)
+        val inclination = FloatArray(9)
+
+        if (SensorManager.getRotationMatrix(rotation, inclination, mGravity, mGeomagnetic)) {
+            val orientation = FloatArray(3)
+            SensorManager.getOrientation(rotation, orientation)
+//            var azimuth = Math.toDegrees(orientation[0].toDouble()).toFloat() // orientation
+//            azimuth = (azimuth + 360) % 360
+//            compassOrientation.setPolesDirection(azimuth)
+//            compassOrientation.setLastPolesDirection(lastPolesAzimuth)
+//
+//            // update last pole azimuth for next iteration
+//            lastPolesAzimuth = azimuth
+//            val destinationAzimuth: Double = azimuth -
+//                    bearing(
+//                        currentPosition.getLatitude(), currentPosition.getLongtitude(),
+//                        destinationPosition.getLatitude(), destinationPosition.getLongtitude()
+//                    )
+//            compassOrientation.setDestinationDirection(destinationAzimuth.toFloat())
+//            compassOrientation.setLastDestinationDirection(lastDestinationAzimuth)
+//
+//            // update last destination azimuth for next iteration
+//            lastDestinationAzimuth = destinationAzimuth.toFloat()
+            updateText()
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    // update displayed text
+    private fun updateText() {
+        val longitude = mLocation?.longitude
+        val latitude = mLocation?.latitude
+        mTextView?.setText(
+            """
+                Location: ${longitude.toString()} : ${latitude.toString()}
+                Gravity: ${mGravity[0]}, ${mGravity[1]}, ${mGravity[2]}
+                Geomagnetic: ${mGeomagnetic[0]}, ${mGeomagnetic[1]}, ${mGeomagnetic[2]}                 
+            """.trimIndent()
+        )
     }
 }
