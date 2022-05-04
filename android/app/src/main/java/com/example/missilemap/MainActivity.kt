@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 
 import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
 import kotlin.math.roundToInt
 
 
@@ -151,7 +152,7 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener 
         val azimuth = Math.toDegrees(mAzimuth.toDouble()).roundToInt()
         mTextView?.setText(
             """
-                Location: ${longitude.toString()} : ${latitude.toString()}
+                Location: ${latitude.toString()} : ${longitude.toString()}
                 North: ${azimuth}
             """.trimIndent()
         )
