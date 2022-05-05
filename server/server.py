@@ -3,22 +3,27 @@ REST API server for MissileMap backend.
 
 Run:
     uvicorn server:app --reload
+
+Environment variables:
+    MISSILEMAP_DATABASE - database name to use (default: 'missilemap')
 """
+import os
 
 from fastapi import FastAPI, status
-from missilemap import Sighting
+from missilemap import Sighting, MissileMap
 from missilemap.storage import get_storage
 
-"""
-Starlette/FastAPI application 
-"""
+# FastAPI application
 app = FastAPI(
     title="MissileMap",
     description="MissileMap REST API server"
 )
 
-# odmantic object storage
-db = get_storage()
+# initialize DB storage:
+db = get_storage(database=os.environ.get('MISSILEMAP_DATABASE', 'missilemap'))  # odmantic object storage
+
+# initialize core application logic:
+core = MissileMap(db=db)
 
 
 @app.get('/sightings')
@@ -26,7 +31,7 @@ async def _get_sightings():
     """
     Get list of reported threats
     """
-    return await db.find(model=Sighting)
+    return await core.list_sightings()
 
 
 @app.post('/sightings', status_code=status.HTTP_201_CREATED)
@@ -36,7 +41,7 @@ async def _post_sighting(sighting: Sighting):
 
     :param sighting: sighting object
     """
-    return await db.save(sighting)
+    return await core.add_sighting(sighting)
 
 
 # @app.post('/register')

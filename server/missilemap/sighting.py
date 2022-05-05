@@ -10,7 +10,7 @@ class Sighting(BaseModel):
     """
     Defines a single sighting
     """
-    timestamp: datetime.datetime   # sighting timestamp (FIXME: odmantic only supports naive datetime objects?)
+    timestamp: int                 # sighting timestamp (in seconds since epoch)
     longitude: float               # location longitude
     latitude: float                # location latitude
     azimuth: float                 # flight direction relative to north pole [-pi..pi]
