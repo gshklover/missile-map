@@ -3,7 +3,9 @@ Object storage support
 """
 # from abc import ABC, abstractmethod
 
-from odmantic import AIOEngine, Model as BaseModel
+from odmantic import AIOEngine
+
+# from odmantic import Model as BaseModel
 # from typing import Sequence
 
 
@@ -93,9 +95,9 @@ from odmantic import AIOEngine, Model as BaseModel
 #         pass
 
 
-def get_storage(database='missilemap'):
+def get_storage(database='missilemap') -> AIOEngine:
     """
-    Get object storage
+    Get model storage backend.
 
     :param database: database name to use
     """

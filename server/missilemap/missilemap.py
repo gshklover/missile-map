@@ -4,6 +4,7 @@ Core logic implementation for missile map application
 from typing import Sequence
 
 from .sighting import Sighting
+from .user import User
 
 
 class MissileMap:
@@ -28,3 +29,11 @@ class MissileMap:
         Get list of reported sightings
         """
         return await self._db.find(model=Sighting)
+
+    async def register_user(self, User):
+        """
+        Perform user registration
+
+        :param User:
+        :return:
+        """

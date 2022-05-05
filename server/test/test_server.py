@@ -1,7 +1,6 @@
 """
 Unit testing for REST server
 """
-
 import os
 import random
 import subprocess
@@ -26,6 +25,10 @@ class TestServer(IsolatedAsyncioTestCase):
 
     @classmethod
     def setUpClass(cls) -> None:
+        """
+        Called once when initializing the tests
+        """
+        # start a server process
         cls._server = subprocess.Popen([
             'uvicorn', 'server:app', '--port', str(PORT)
         ], cwd=PROJ_DIR, env={
@@ -38,9 +41,12 @@ class TestServer(IsolatedAsyncioTestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
+        """
+        Called once after running the tests
+        """
         cls._server.terminate()
 
-    async def test_insert(self):
+    async def test_sightings(self):
         """
         Test inserting sightings
         """
