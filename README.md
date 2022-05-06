@@ -9,14 +9,14 @@ Crowd-sourced cruise missile warning system.
   Low flying altitudes make detection and tracking of cruise missiles challenging for conventional anti-aircraft defence radars.
 
 ### Suggested solution:
-* Use crowed-sourcing to track guided missiles
+* Use crowd-sourcing to track guided missiles
 * A person with installed application will be able to report location & direction of observed missle
 * Cloud server will process (authenticate, filter and aggregate) the reports and provide live map of known threats
 
 ### Implementation:
 * REST API server using python FastAPI (https://fastapi.tiangolo.com/).
 * MongoDB for backend storage (https://www.mongodb.com/). Using odmantic (https://art049.github.io/odmantic/) to simplify object access.
-* Android client-side application with google maps integration.
+* Android client-side application with Google Maps integration.
 
 ## Setup instructions:
 
