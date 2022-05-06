@@ -65,7 +65,7 @@ def render(location, zoom=6, plot_width=1400, plot_height=800, api_key: str = No
             #         line_color='red',
             #         line_width=2
             #     ))
-            
+
         arrows = pandas.DataFrame(arrows)
         figure.segment(
             x0=arrows['x_start'].values,

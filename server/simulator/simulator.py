@@ -8,6 +8,7 @@ import numpy
 
 from missilemap import Sighting
 from missilemap.definitions import Location
+from .plotting import render
 
 
 def random_sighting(location: Location, distance: float, azimuth: float) -> Sighting:
@@ -37,3 +38,21 @@ def random_sighting(location: Location, distance: float, azimuth: float) -> Sigh
         timestamp=datetime.datetime.now().timestamp(),
         azimuth=azimuth
     )
+
+
+class Simulator:
+    """
+    Over-time simulator for tracking missile sightings
+    """
+
+    def __init__(self):
+        pass
+
+    def render(self, plot_width=1400, plot_height=800):
+        """
+        Render current simulation state
+
+        :return:
+        """
+        pass
+
