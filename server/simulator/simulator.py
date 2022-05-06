@@ -2,6 +2,7 @@
 Simulator code for validation
 """
 import datetime
+import geopy.distance
 import math
 import numpy
 
@@ -27,11 +28,12 @@ def random_sighting(location: Location, distance: float, azimuth: float) -> Sigh
     elif azimuth < -math.pi:
         azimuth += 2 * math.pi
 
-    # TODO: add distance noise
+    # add location noise with normal around specified location
+    location = geopy.distance.distance(kilometers=abs(numpy.random.normal(0, distance))).destination(location, bearing=numpy.random.randint(0, 360))
 
     return Sighting(
-        latitude=location.latitude,
-        longitude=location.longitude,
+        latitude=location[0],
+        longitude=location[1],
         timestamp=datetime.datetime.now().timestamp(),
         azimuth=azimuth
     )
