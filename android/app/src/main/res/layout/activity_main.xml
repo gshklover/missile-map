@@ -23,14 +23,24 @@
         android:layout_gravity="center"
         android:text="TextView" />
 
-    <androidx.appcompat.widget.AppCompatImageView
-        android:id="@+id/canvas"
+
+    <fragment
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:gravity="center"
         android:layout_weight="1"
-        app:srcCompat="@drawable/ic_baseline_arrow_upward_24"
     />
+
+<!--    <androidx.appcompat.widget.AppCompatImageView-->
+<!--        android:id="@+id/canvas"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="0dp"-->
+<!--        android:gravity="center"-->
+<!--        android:layout_weight="1"-->
+<!--        app:srcCompat="@drawable/ic_baseline_arrow_upward_24"-->
+<!--    />-->
 
     <Button
         android:id="@+id/button"

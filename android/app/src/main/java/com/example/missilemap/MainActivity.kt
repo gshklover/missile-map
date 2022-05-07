@@ -11,40 +11,44 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
-import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.*
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import kotlin.math.roundToInt
 
+val DEFAULT_ZOOM : Float = 10.0f  // default map zoom
+val UPDATE_RATE_MS : Long = 100    // minimum time (ms) between map updates
 
 /**
  * Main application activity
  */
-class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener {
+class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener, OnMapReadyCallback {
 
     // visual elements:
-    private var mTextView: TextView? = null        // text field that displays the location
-    private var mArrow: View? = null
+    private lateinit var mTextView: TextView        // text field that displays the location
+    // private lateinit var mArrow: View
+    private lateinit var mMap: GoogleMap
+    private var mLastUpdateTime: Long = 0         // last update time mMap
 
     // sensor readings:
     private val mGravity = FloatArray(3) { _ -> 0.0f }      // current accelerometer reading
     private val mGeomagnetic = FloatArray(3) { _ -> 0.0f }  // current magnetic sensor reading
-    private var mLocation : Location? = null
-    private var mAzimuth : Float = 0f // radians between device Y axis and north pole [-pi..pi]
-
-    // computed values:
-    private val mRotation = FloatArray(9)     // current rotation matrix
+    private var mLocation : Location? = null                     // current location
+    private var mBearing : Float = 0f                            // current phone bearing (radians, [-pi..+pi])
 
     // called when the activity is first created
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         mTextView = findViewById<TextView>(R.id.textView)
-        mArrow = findViewById<View>(R.id.canvas)
+        // mArrow = findViewById<View>(R.id.canvas)
+
+        // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
+        mapFragment.getMapAsync(this)
 
         // check location permissions and request if missing:
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION ) != PackageManager.PERMISSION_GRANTED &&
@@ -133,11 +137,12 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener 
         if (SensorManager.getRotationMatrix(rotation, null, mGravity, mGeomagnetic)) {
             val orientation = FloatArray(3)
             SensorManager.getOrientation(rotation, orientation)
-            // angle between device Y axis and north pole direction (-pi..pi)
 
             // sensors are noisy. we are using exponential moving average to smooth out the reading.
             val alpha = 0.9f
-            mAzimuth = alpha * mAzimuth  - (1 - alpha) * orientation[0]
+            // FIXME: when rotating around south, this method DOES NOT WORK WELL
+            //        need to find shortest angle distance between previous and new bearing (not necessary through north)
+            mBearing = alpha * mBearing  + (1 - alpha) * orientation[0]
             updateText()
         }
     }
@@ -149,14 +154,43 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener 
     private fun updateText() {
         val longitude = mLocation?.longitude
         val latitude = mLocation?.latitude
-        val azimuth = Math.toDegrees(mAzimuth.toDouble()).roundToInt()
-        mTextView?.setText(
+        val bearing = Math.toDegrees(mBearing.toDouble()).roundToInt()
+        mTextView.setText(
             """
                 Location: ${latitude.toString()} : ${longitude.toString()}
-                North: ${azimuth}
+                Bearing: ${bearing}
             """.trimIndent()
         )
 
-        mArrow?.rotation = azimuth.toFloat()
+        // mArrow.rotation = azimuth.toFloat()
+        if (::mMap.isInitialized && latitude != null && longitude != null) {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime < mLastUpdateTime || currentTime > mLastUpdateTime + UPDATE_RATE_MS) {
+                mLastUpdateTime = currentTime
+                val currentPos = mMap.cameraPosition
+                val newPos = CameraPosition(
+                    LatLng(latitude, longitude),
+                    currentPos.zoom,
+                    0f,
+                    Math.toDegrees(mBearing.toDouble()).toFloat()
+                )
+                mMap.moveCamera(CameraUpdateFactory.newCameraPosition(newPos))
+            }
+        }
+    }
+
+    // implements OnMapReadyCallback interface
+    override fun onMapReady(googleMap: GoogleMap) {
+        mMap = googleMap
+        // mMap.isMyLocationEnabled = true - for automatic tracking by google maps
+
+        var location = mLocation
+        if (location == null) {
+            location = Location(LocationManager.GPS_PROVIDER)
+            location.latitude = 34.0
+            location.longitude = 47.0
+        }
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), DEFAULT_ZOOM));
+//        mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
     }
 }

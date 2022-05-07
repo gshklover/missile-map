@@ -28,5 +28,11 @@ Crowd-sourced cruise missile warning system.
 
 Development is performed on Linux, but Windows OS should work as well.
 
-### Setup
+### Dev environment setup:
 * git clone git@github.com:gshklover/missile-map.git
+* For Android application, open missile-map/android in AndroidStudio
+* For server application, open missile-map/server in PyCharm
+
+### Running:
+* Run mongod on standard port (27017) locally
+* Run all tests under server/test directory
