@@ -3,6 +3,9 @@ package com.example.missilemap
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.Drawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -14,10 +17,12 @@ import android.os.Bundle
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.*
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.*
+import kotlin.math.min
 import kotlin.math.roundToInt
+
 
 val DEFAULT_ZOOM : Float = 10.0f  // default map zoom
 val UPDATE_RATE_MS : Long = 100    // minimum time (ms) between map updates
@@ -29,8 +34,8 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
 
     // visual elements:
     private lateinit var mTextView: TextView        // text field that displays the location
-    // private lateinit var mArrow: View
-    private lateinit var mMap: GoogleMap
+    private lateinit var mMap: GoogleMap          // reference to google map object
+    private lateinit var mMapPos: Marker          // current position marker on the map
     private var mLastUpdateTime: Long = 0         // last update time mMap
 
     // sensor readings:
@@ -44,7 +49,6 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         mTextView = findViewById<TextView>(R.id.textView)
-        // mArrow = findViewById<View>(R.id.canvas)
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -175,7 +179,6 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
             """.trimIndent()
         )
 
-        // mArrow.rotation = azimuth.toFloat()
         if (::mMap.isInitialized && latitude != null && longitude != null) {
             val currentTime = System.currentTimeMillis()
             if (currentTime < mLastUpdateTime || currentTime > mLastUpdateTime + UPDATE_RATE_MS) {
@@ -188,14 +191,16 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
                     Math.toDegrees(mBearing.toDouble()).toFloat()
                 )
                 mMap.moveCamera(CameraUpdateFactory.newCameraPosition(newPos))
+                if (::mMapPos.isInitialized) {
+                    mMapPos.position = LatLng(latitude, longitude)
+                }
             }
         }
     }
 
-    // implements OnMapReadyCallback interface
+    // called when the GoogleMap object is ready
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
-        // mMap.isMyLocationEnabled = true - for automatic tracking by google maps
 
         var location = mLocation
         if (location == null) {
@@ -203,7 +208,27 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
             location.latitude = 34.0
             location.longitude = 47.0
         }
+
+        val bitmapDescriptor = getBitmapDescriptor(R.drawable.map_circle)
+        val marker = mMap.addMarker(
+            MarkerOptions().position(LatLng(location.latitude, location.longitude)).icon(bitmapDescriptor)
+        )
+        if (marker != null) {
+            mMapPos = marker
+        }
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), DEFAULT_ZOOM));
-//        mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
+    }
+
+    // load vector graphics into a drawable
+    private fun getBitmapDescriptor(id: Int): BitmapDescriptor? {
+        val vectorDrawable = ContextCompat.getDrawable(this, id) ?: return null
+        // vectorDrawable.setTint(0x000080)
+        val displayMetrics = resources.displayMetrics
+        val pixels = min(displayMetrics.widthPixels, displayMetrics.heightPixels) / 10
+        val bm = Bitmap.createBitmap(pixels, pixels, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bm)
+        vectorDrawable.setBounds(0, 0, pixels, pixels)
+        vectorDrawable.draw(canvas)
+        return BitmapDescriptorFactory.fromBitmap(bm)
     }
 }
