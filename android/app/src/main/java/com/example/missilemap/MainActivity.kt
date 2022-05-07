@@ -140,9 +140,22 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
 
             // sensors are noisy. we are using exponential moving average to smooth out the reading.
             val alpha = 0.9f
-            // FIXME: when rotating around south, this method DOES NOT WORK WELL
-            //        need to find shortest angle distance between previous and new bearing (not necessary through north)
-            mBearing = alpha * mBearing  + (1 - alpha) * orientation[0]
+            var bearing = orientation[0]
+            val pi = Math.PI.toFloat()
+            if (Math.abs(mBearing - bearing) > pi) {
+                // wrap around, choose shortest pass
+                if (bearing > 0) {
+                    bearing -= 2f * pi
+                } else {
+                    bearing += 2f * pi
+                }
+            }
+            mBearing = alpha * mBearing  + (1 - alpha) * bearing
+            if (mBearing < -pi) {
+                mBearing += 2 * pi
+            } else if (mBearing > pi) {
+                mBearing -= 2 * pi
+            }
             updateText()
         }
     }
