@@ -18,13 +18,19 @@ import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.android.volley.Request
 import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.*
+import com.android.volley.RequestQueue
+import com.android.volley.toolbox.JsonObjectRequest
+import com.android.volley.toolbox.Volley
+import org.json.JSONObject
 import kotlin.math.min
 
 
-val DEFAULT_ZOOM : Float = 10.0f  // default map zoom
+val DEFAULT_ZOOM : Float = 10.0f   // default map zoom
 val UPDATE_RATE_MS : Long = 100    // minimum time (ms) between map updates
+val POST_URL = "http://10.0.2.2:8000/sightings"
 
 /**
  * Main application activity
@@ -43,6 +49,9 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
     private var mLocation : Location? = null                     // current location
     private var mBearing : Float = 0f                            // current phone bearing (radians, [-pi..+pi])
 
+    // handling requests:
+    private lateinit var mRequestQueue : RequestQueue      // REST request queue
+
     // called when the activity is first created
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +59,8 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
 
         mReportButton = findViewById<Button>(R.id.report_btn)
         mReportButton.isEnabled = false
+
+        mRequestQueue = Volley.newRequestQueue(this)
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -234,7 +245,15 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
 
     // called when "Report" button is clicked
     fun onReport(view: View) {
-        // TODO("Send current location here")
+        val url = POST_URL
+        val json = JSONObject()
+        json.put("latitude",  mLocation?.latitude)
+        json.put("longitude", mLocation?.longitude)
+        json.put("bearing",   mBearing)
 
+        val request = JsonObjectRequest(Request.Method.POST, url, json, null, {
+            error -> error.printStackTrace()
+        })
+        mRequestQueue.add(request)
     }
 }
