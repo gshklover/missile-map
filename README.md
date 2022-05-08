@@ -1,6 +1,8 @@
 # missile-map
 Crowd-sourced cruise missile warning system.
 
+<img src="doc/images/app.png" alt="application" width="240" style="float: right;"/>
+
 ### Goal:
   Provide crowd-sourced **warning system against cruise missile attacks** over populated areas.
 
