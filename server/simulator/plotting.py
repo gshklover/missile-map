@@ -46,7 +46,7 @@ def render(location, zoom=6, plot_width=1400, plot_height=800, api_key: str = No
 
         arrows = []
         for s in sightings:
-            head = distance(kilometers=2).destination((s.latitude, s.longitude), bearing=s.azimuth if s.azimuth > 0 else s.azimuth + 2 * math.pi)
+            head = distance(kilometers=2).destination((s.latitude, s.longitude), bearing=s.bearing if s.bearing > 0 else s.bearing + 2 * math.pi)
             arrows.append({
                 'x_start': s.longitude,
                 'y_start': s.latitude,
