@@ -16,14 +16,6 @@
         android:background="?attr/colorPrimary"
         app:popupTheme="@style/Theme.TestLocation.PopupOverlay" />
 
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="TextView" />
-
-
     <fragment
         android:id="@+id/map"
         android:name="com.google.android.gms.maps.SupportMapFragment"
@@ -33,19 +25,12 @@
         android:layout_weight="1"
     />
 
-<!--    <androidx.appcompat.widget.AppCompatImageView-->
-<!--        android:id="@+id/canvas"-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="0dp"-->
-<!--        android:gravity="center"-->
-<!--        android:layout_weight="1"-->
-<!--        app:srcCompat="@drawable/ic_baseline_arrow_upward_24"-->
-<!--    />-->
-
     <Button
-        android:id="@+id/button"
+        android:id="@+id/report_btn"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Report" />
+        android:text="Report"
+        android:onClick="onReport"
+        />
 
 </LinearLayout>

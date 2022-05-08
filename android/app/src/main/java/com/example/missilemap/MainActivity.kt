@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.drawable.Drawable
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -14,7 +13,8 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
-import android.widget.TextView
+import android.view.View
+import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -33,7 +33,7 @@ val UPDATE_RATE_MS : Long = 100    // minimum time (ms) between map updates
 class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener, OnMapReadyCallback {
 
     // visual elements:
-    private lateinit var mTextView: TextView        // text field that displays the location
+    private lateinit var mReportButton: Button    // "Report" button
     private lateinit var mMap: GoogleMap          // reference to google map object
     private lateinit var mMapPos: Marker          // current position marker on the map
     private var mLastUpdateTime: Long = 0         // last update time mMap
@@ -48,7 +48,9 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        mTextView = findViewById<TextView>(R.id.textView)
+
+        mReportButton = findViewById<Button>(R.id.report_btn)
+        mReportButton.isEnabled = false
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -88,6 +90,7 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
 
     // called by LocationManager when location changes
     override fun onLocationChanged(location: Location) {
+        mReportButton.isEnabled = true
         mLocation = location
         updateText()
     }
@@ -171,13 +174,6 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
     private fun updateText() {
         val longitude = mLocation?.longitude
         val latitude = mLocation?.latitude
-        val bearing = Math.toDegrees(mBearing.toDouble()).roundToInt()
-        mTextView.setText(
-            """
-                Location: ${latitude.toString()} : ${longitude.toString()}
-                Bearing: ${bearing}
-            """.trimIndent()
-        )
 
         if (::mMap.isInitialized && latitude != null && longitude != null) {
             val currentTime = System.currentTimeMillis()
@@ -209,9 +205,11 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
             location.longitude = 47.0
         }
 
-        val bitmapDescriptor = getBitmapDescriptor(R.drawable.map_circle)
+        val markerSize = defaultMarkerSize()
+        val bitmapDescriptor = getBitmapDescriptor(R.drawable.center_marker, markerSize, markerSize * 2)
         val marker = mMap.addMarker(
-            MarkerOptions().position(LatLng(location.latitude, location.longitude)).icon(bitmapDescriptor)
+            MarkerOptions().position(LatLng(location.latitude, location.longitude))
+                .icon(bitmapDescriptor).anchor(0.5f, 0.75f)
         )
         if (marker != null) {
             mMapPos = marker
@@ -219,16 +217,24 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), DEFAULT_ZOOM));
     }
 
-    // load vector graphics into a drawable
-    private fun getBitmapDescriptor(id: Int): BitmapDescriptor? {
-        val vectorDrawable = ContextCompat.getDrawable(this, id) ?: return null
-        // vectorDrawable.setTint(0x000080)
+    // compute default marker size for the map
+    private fun defaultMarkerSize(): Int {
         val displayMetrics = resources.displayMetrics
-        val pixels = min(displayMetrics.widthPixels, displayMetrics.heightPixels) / 10
-        val bm = Bitmap.createBitmap(pixels, pixels, Bitmap.Config.ARGB_8888)
+        return min(displayMetrics.widthPixels, displayMetrics.heightPixels) / 10
+    }
+
+    // load vector graphics into a drawable of specified size
+    private fun getBitmapDescriptor(id: Int, width: Int, height: Int): BitmapDescriptor? {
+        val vectorDrawable = ContextCompat.getDrawable(this, id) ?: return null
+        val bm = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bm)
-        vectorDrawable.setBounds(0, 0, pixels, pixels)
+        vectorDrawable.setBounds(0, 0, width, height)
         vectorDrawable.draw(canvas)
         return BitmapDescriptorFactory.fromBitmap(bm)
+    }
+
+    // called when "Report" button is clicked
+    fun onReport(view: View) {
+        TODO("Send current location here")
     }
 }
