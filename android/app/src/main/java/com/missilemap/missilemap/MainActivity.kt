@@ -1,4 +1,4 @@
-package com.example.missilemap
+package com.missilemap.missilemap
 
 import android.Manifest
 import android.content.Context
@@ -21,7 +21,6 @@ import androidx.core.content.ContextCompat
 import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.*
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 
 val DEFAULT_ZOOM : Float = 10.0f  // default map zoom
@@ -235,6 +234,7 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
 
     // called when "Report" button is clicked
     fun onReport(view: View) {
-        TODO("Send current location here")
+        // TODO("Send current location here")
+
     }
 }
