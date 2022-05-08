@@ -1,8 +1,6 @@
 """
 API to manipulate reported sightings
 """
-import datetime
-# from pydantic import BaseModel
 from odmantic import Model as BaseModel
 
 

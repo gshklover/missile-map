@@ -7,6 +7,7 @@ Run:
 Environment variables:
     MISSILEMAP_DATABASE - database name to use (default: 'missilemap')
 """
+import time
 import os
 
 from fastapi import FastAPI, status
@@ -41,6 +42,7 @@ async def _post_sighting(sighting: Sighting):
 
     :param sighting: sighting object
     """
+    sighting.timestamp = int(time.time())  # override timestamp
     return await core.add_sighting(sighting)
 
 
