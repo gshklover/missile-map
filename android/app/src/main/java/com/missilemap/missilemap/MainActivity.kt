@@ -13,6 +13,8 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
@@ -56,6 +58,7 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        setSupportActionBar(findViewById(R.id.toolbar))
 
         mReportButton = findViewById<Button>(R.id.report_btn)
         mReportButton.isEnabled = false
@@ -96,6 +99,24 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
 
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
         locationManager.removeUpdates(this)
+    }
+
+    // called to populate options menu
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_main, menu)
+        return true;
+    }
+
+    // called to handle a menu actions
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.action_showmap -> {
+                return true
+            }
+            else -> {
+                return super.onOptionsItemSelected(item)
+            }
+        }
     }
 
     // called by LocationManager when location changes

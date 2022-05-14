@@ -3,7 +3,7 @@ Plotting support using bokeh & Jupyter
 """
 import math
 import os
-from typing import Sequence
+from typing import Sequence, Tuple
 
 import pandas
 from bokeh.models import GMapOptions
@@ -14,7 +14,9 @@ from missilemap import Sighting
 
 
 def render(location, zoom=6, plot_width=1400, plot_height=800, api_key: str = None, title=None,
-           sightings: Sequence[Sighting] = None, sighting_size=10) -> GMap:
+           sightings: Sequence[Sighting] = None, sighting_size=10,
+           paths: Sequence[Sequence[Tuple[float, float]]] = None
+           ) -> GMap:
     """
     Render a map with sightings.
 
@@ -26,6 +28,7 @@ def render(location, zoom=6, plot_width=1400, plot_height=800, api_key: str = No
     :param title: (optional) figure title
     :param sightings: (optional) list of sightings to display
     :param sighting_size: (optional) circle size for sightings in pixels (default: 10)
+    :param paths: (optional) list of paths where each path is a sequence of points [(latitude, longitude), ...]
 
     :return: bokeh.Figure
     """
@@ -37,8 +40,8 @@ def render(location, zoom=6, plot_width=1400, plot_height=800, api_key: str = No
     gmap_options = GMapOptions(lat=location[0], lng=location[1], map_type='roadmap', zoom=zoom)
     figure = gmap(api_key, gmap_options, title=title, width=plot_width, height=plot_height)
 
-    if sightings is not None:
-        # render signting points:
+    if sightings is not None and len(sightings):
+        # render sighting points:
         figure.circle(
             x=[s.longitude for s in sightings],
             y=[s.latitude for s in sightings],
@@ -46,7 +49,8 @@ def render(location, zoom=6, plot_width=1400, plot_height=800, api_key: str = No
 
         arrows = []
         for s in sightings:
-            head = distance(kilometers=2).destination((s.latitude, s.longitude), bearing=s.bearing if s.bearing > 0 else s.bearing + 2 * math.pi)
+            head = distance(kilometers=2).destination((s.latitude, s.longitude),
+                                                      bearing=math.degrees(s.bearing if s.bearing > 0 else s.bearing + 2 * math.pi))
             arrows.append({
                 'x_start': s.longitude,
                 'y_start': s.latitude,
@@ -74,6 +78,23 @@ def render(location, zoom=6, plot_width=1400, plot_height=800, api_key: str = No
             y1=arrows['y_end'].values,
             line_color='red',
             line_width=1
+        )
+
+    if paths is not None and len(paths):
+        # render specified paths as segments
+        x_start = []
+        y_start = []
+        x_end = []
+        y_end = []
+        for path in paths:
+            for s, e in zip(path[:-1], path[1:]):
+                x_start.append(s[1])
+                y_start.append(s[0])
+                x_end.append(e[1])
+                y_end.append(e[0])
+
+        figure.segment(
+            x0=x_start, y0=y_start, x1=x_end, y1=y_end, line_color='blue', line_width=2, line_alpha=0.8
         )
 
     return figure
