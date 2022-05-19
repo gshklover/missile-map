@@ -51,7 +51,7 @@ class TestServer(IsolatedAsyncioTestCase):
         Test inserting sightings
         """
         # cleanup test DB:
-        db = get_storage('test')
+        db = get_storage('test').db  # noqa. Assuming it is MongoDBStorage.
         await db.get_collection(Sighting).drop()
 
         sightings = [

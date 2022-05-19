@@ -1,105 +1,79 @@
 """
 Object storage support
 """
-# from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod
+from typing import Sequence
 
 from odmantic import AIOEngine
 
-# from odmantic import Model as BaseModel
-# from typing import Sequence
+from missilemap import Sighting
 
 
-# class ICollection(ABC):
-#     """
-#     Basic async CRUD collection interface
-#     """
-#     @abstractmethod
-#     async def insert_one(self, item: BaseModel):
-#         """
-#         Insert new item into collection
-#
-#         :param item:
-#         :return:
-#         """
-#         raise NotImplementedError()
-#
-#     @abstractmethod
-#     async def insert_many(self, items: Sequence[BaseModel]):
-#         """
-#         Insert specified object into the collection
-#
-#         :param items: list of items to insert
-#         """
-#         raise NotImplementedError()
-#
-#     @abstractmethod
-#     async def update_one(self, item: BaseModel):
-#         """
-#         Update single object
-#         """
-#         raise NotImplementedError()
-#
-#     @abstractmethod
-#     async def find_one(self, item_id):
-#         """
-#         Find single object by object ID
-#
-#         :param item_id:
-#         :return:
-#         """
-#         raise NotImplementedError()
-#
-#     @abstractmethod
-#     async def find_many(self) -> Sequence[BaseModel]:
-#         raise NotImplementedError()
-#
-#     @abstractmethod
-#     async def remove_one(self, item_id):
-#         raise NotImplementedError()
-#
-#     @abstractmethod
-#     async def remove_many(self):
-#         raise NotImplementedError()
-#
-#
-# class IStorage:
-#     """
-#     Basic storage management interface
-#     """
-#     def get_collection(self, name: str) -> ICollection:
-#         """
-#         Get collection specified by name
-#
-#         :param name: collection name
-#         :return:
-#         """
-#         raise NotImplementedError()
-#
-#
-# class MongoDBStorage(IStorage):
-#     """
-#     IStorage implementation based on odmantic
-#     """
-#     def __init__(self, database='missilemap'):
-#         self._db = AIOEngine(database=database)
-#
-#     def get_collection(self, name: str) -> ICollection:
-#         return MongoDBCollection(self._db, name)
-#
-#
-# class MongoDBCollection(ICollection):
-#     """
-#     Wrapper over dmantic storage implementing ICollection interface
-#     """
-#     def __init__(self, db: AIOEngine, name: str):
-#         pass
+class ISightingStorage(ABC):
+    """
+    Sighting storage interface (asynchronous)
+    """
+    @abstractmethod
+    async def add_sighting(self, sighting: Sighting) -> Sighting:
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def list_sightings(self) -> Sequence[Sighting]:
+        raise NotImplementedError()
 
 
-def get_storage(database='missilemap') -> AIOEngine:
+class MemoryStorage(ISightingStorage):
+    """
+    Default in-memory storage implementation
+    """
+
+    def __init__(self):
+        """
+        Initialize the object
+        """
+        self._sightings = {}
+
+    async def add_sighting(self, sighting: Sighting):
+        """
+        Add a sighting to in-memory storage
+        """
+        self._sightings[sighting.id] = sighting
+        return sighting
+
+    async def list_sightings(self) -> Sequence[Sighting]:
+        """
+        Get all sightings
+        """
+        return list(self._sightings.values())
+
+
+class MongoDBStorage(ISightingStorage):
+    """
+    MongoDB-based storage implementation
+    """
+    def __init__(self, db: AIOEngine):
+        self.db = db
+
+    async def add_sighting(self, sighting: Sighting):
+        """
+        Store sighting into DB
+
+        :param sighting: sighting object
+        """
+        return await self.db.save(sighting)
+
+    async def list_sightings(self) -> Sequence[Sighting]:
+        """
+        List stored sightings
+        """
+        return await self.db.find(model=Sighting)
+
+
+def get_storage(database='missilemap') -> ISightingStorage:
     """
     Get model storage backend.
 
     :param database: database name to use
     """
     # object database
-    return AIOEngine(database=database)
+    return MongoDBStorage(db=AIOEngine(database=database))

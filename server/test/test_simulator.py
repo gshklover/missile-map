@@ -3,7 +3,8 @@ from unittest import TestCase
 from geopy import Point
 import random
 
-from simulator import Simulator, Target, Observer, random_location
+from simulator import Simulator, Observer, random_location
+from missilemap.definitions import Target
 
 
 class TestSimulator(TestCase):

@@ -14,15 +14,12 @@ import math
 import numpy
 
 from missilemap import Sighting
-from missilemap.definitions import Location
+from missilemap.definitions import Target
 from .plotting import render
 from missilemap.utils import closest_point, get_bearing, normalize_bearing
 
-# default target speed: 800km/h
-DEFAULT_SPEED = 800000/3600
 
-
-def random_sighting(location: Location, distance: float, azimuth: float) -> Sighting:
+def random_sighting(location: Point, distance: float, azimuth: float) -> Sighting:
     """
     Generates a random sighting around the specified point
 
@@ -81,48 +78,6 @@ def _add_bearing_noise(bearing: float, noise: float) -> float:
     :return: modified bearing
     """
     return normalize_bearing(bearing + noise * (random.random() * 2 - 1))
-
-
-class Target:
-    """
-    Base class for simulated targets.
-    A target moves along a specified path with a fixed speed.
-    """
-    __slots__ = ('start_time', 'speed', 'path', 'distances')
-
-    def __init__(self, start_time: int = 0, speed: float = DEFAULT_SPEED, path: Sequence[Point] = None):
-        """
-        Initializes a target object with trip start time, path and speed.
-        Distance (meters) per path segment is computed automatically.
-
-        :param start_time: start time for target (seconds since epoch)
-        :param speed: target speed (m/sec)
-        :param path: target path [(lat, long), ...]
-        """
-        self.start_time = start_time
-        self.speed = speed
-        self.path = tuple(path) if path else tuple()
-        self.distances = tuple([
-            distance(prev_pos, next_pos).meters for prev_pos, next_pos in zip(self.path[:-1], self.path[1:])
-        ])
-
-    @property
-    def start_location(self) -> Point:
-        """
-        Target start location
-        """
-        return self.path[0]
-
-    @property
-    def end_location(self) -> Point:
-        """
-        Target end location
-        """
-        return self.path[-1]
-
-    @property
-    def total_distance(self) -> float:
-        return sum(self.distances)
 
 
 class Observer:

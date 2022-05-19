@@ -21,10 +21,10 @@ app = FastAPI(
 )
 
 # initialize DB storage:
-db = get_storage(database=os.environ.get('MISSILEMAP_DATABASE', 'missilemap'))  # odmantic object storage
+storage = get_storage(database=os.environ.get('MISSILEMAP_DATABASE', 'missilemap'))  # odmantic object storage
 
 # initialize core application logic:
-core = MissileMap(db=db)
+core = MissileMap(storage=storage)
 
 
 @app.get('/sightings')

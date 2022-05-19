@@ -3,17 +3,18 @@ Core logic implementation for missile map application
 """
 from typing import Sequence
 
-from .sighting import Sighting
-from .user import User
+from . import Sighting
+from .storage import ISightingStorage
 
 
 class MissileMap:
     """
     Core logic implementation for missile map server
     """
+    TARGET_SPEED_RANGE = (700000/3600, 1000000/3600)  # target speed range (min, max)
 
-    def __init__(self, db):
-        self._db = db
+    def __init__(self, storage: ISightingStorage):
+        self._storage = storage
 
     async def add_sighting(self, sighting: Sighting) -> Sighting:
         """
@@ -22,13 +23,13 @@ class MissileMap:
         :param sighting:
         :return: the sighting object
         """
-        return await self._db.save(sighting)
+        return await self._storage.add_sighting(sighting)
 
     async def list_sightings(self) -> Sequence[Sighting]:
         """
         Get list of reported sightings
         """
-        return await self._db.find(model=Sighting)
+        return await self._storage.list_sightings()
 
     async def register_user(self, User):
         """
@@ -37,3 +38,15 @@ class MissileMap:
         :param User:
         :return:
         """
+        raise NotImplementedError()
+
+    def analyze_sightings(self, sightings):
+        """
+        Analyze specified sightings and produce predicted set of targets
+
+        :param sightings:
+        :return:
+        """
+        # estimate number of linear segments
+
+        raise NotImplementedError()
