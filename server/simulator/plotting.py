@@ -1,16 +1,41 @@
 """
 Plotting support using bokeh & Jupyter
 """
-import math
-import os
-from typing import Sequence, Tuple
-
-import pandas
 from bokeh.models import GMapOptions
 from bokeh.plotting import gmap, GMap
+from geopy import Point
 from geopy.distance import distance
+import math
+import os
+import pandas
+from typing import Sequence, Tuple, Union
+
 
 from missilemap import Sighting
+
+
+def render_path(figure: GMap, path: Sequence[Union[Point, Tuple[float, float]]], line_color='blue', line_width=2, line_alpha=0.8):
+    """
+    Render specified path on the map chart
+
+    :param figure: GMap object
+    :param path: sequence of points to render
+    :param line_color: line color (default: blue)
+    :param line_width: line width (default: 2.0)
+    :param line_alpha: line alpha controlling transparency (default: 0.8)
+    """
+    x_start = []
+    y_start = []
+    x_end = []
+    y_end = []
+
+    for s, e in zip(path[:-1], path[1:]):
+        x_start.append(s[1])
+        y_start.append(s[0])
+        x_end.append(e[1])
+        y_end.append(e[0])
+
+    figure.segment(x0=x_start, y0=y_start, x1=x_end, y1=y_end, line_color=line_color, line_width=line_width, line_alpha=line_alpha)
 
 
 def render(location, zoom=6, plot_width=1400, plot_height=800, api_key: str = None, title=None,
@@ -82,19 +107,7 @@ def render(location, zoom=6, plot_width=1400, plot_height=800, api_key: str = No
 
     if paths is not None and len(paths):
         # render specified paths as segments
-        x_start = []
-        y_start = []
-        x_end = []
-        y_end = []
         for path in paths:
-            for s, e in zip(path[:-1], path[1:]):
-                x_start.append(s[1])
-                y_start.append(s[0])
-                x_end.append(e[1])
-                y_end.append(e[0])
-
-        figure.segment(
-            x0=x_start, y0=y_start, x1=x_end, y1=y_end, line_color='blue', line_width=2, line_alpha=0.8
-        )
+            render_path(figure, path)
 
     return figure

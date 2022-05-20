@@ -1,10 +1,14 @@
 """
-General purpose utilities
+General purpose utilities for geographic calculations
 """
-import math
-from typing import Sequence, Union, Tuple
-import numpy
 from geopy import Point
+import logging
+import math
+import numpy
+from typing import Sequence, Union, Tuple
+
+
+logger = logging.Logger('missilemap')
 
 
 def closest_point(p1: Sequence[float], p2: Sequence[float], x: Sequence[float]) -> float:
@@ -35,6 +39,21 @@ def closest_point(p1: Sequence[float], p2: Sequence[float], x: Sequence[float]) 
         return 0.0
 
     return numpy.dot(x - p1, p2_p1) / p2_p1_dot
+
+
+def interpolate(p1: Point, p2: Point, alpha) -> Point:
+    """
+    Interpolate the segment (using linear interpolation).
+
+    :param p1: start point
+    :param p2: end point
+    :param alpha: value [0-1.0]
+    :return: linearly interpolated point
+    """
+    return Point(
+        latitude=p1.latitude * (1 - alpha) + p2.latitude * alpha,
+        longitude=p1.longitude * (1 - alpha) + p2.longitude * alpha
+    )
 
 
 def get_bearing(p1: Union[Point, Tuple[float, float]], p2: Union[Point, Tuple[float, float]]) -> float:

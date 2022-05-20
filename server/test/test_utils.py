@@ -71,3 +71,9 @@ class TestUtilities(TestCase):
             math.pi/2,
             places=5
         )
+
+    def test_lint(self):
+        """
+        Run flake8 to lint-clean the code
+        """
+        pass

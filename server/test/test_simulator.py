@@ -1,8 +1,9 @@
 from unittest import TestCase
 
 from geopy import Point
-import random
+from geopy.distance import distance
 
+from missilemap.utils import closest_point
 from simulator import Simulator, Observer, random_location
 from missilemap.definitions import Target
 
@@ -36,3 +37,26 @@ class TestSimulator(TestCase):
         sim = Simulator(targets=[Target(path=path)], observers=observers)
 
         sightings = sim.sightings
+
+        # check that sightings are within DEFAULT_RADIUS from one of the segments
+        for s in sightings:
+            is_ok = False
+
+            for segment_from, segment_to in zip(path[:-1], path[1:]):
+                alpha = closest_point(
+                    (segment_from.latitude, segment_from.longitude),
+                    (segment_to.latitude, segment_to.longitude),
+                    (s.latitude, s.longitude)
+                )
+                alpha = min(1.0, max(0.0, alpha))
+
+                loc = (
+                    segment_from.latitude * (1 - alpha) + segment_to.latitude * alpha,
+                    segment_from.longitude * (1 - alpha) + segment_to.longitude * alpha
+                )
+                d = distance((s.latitude, s.longitude), loc).meters
+                if d <= DEFAULT_RADIUS:
+                    is_ok = True
+                    break
+
+            self.assertTrue(is_ok)

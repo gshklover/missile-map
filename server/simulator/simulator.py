@@ -3,7 +3,7 @@ Simulator code for validation
 """
 import dataclasses
 import datetime
-import random
+import random as _random
 from typing import Sequence, Tuple, Optional
 
 import bokeh.plotting
@@ -14,9 +14,11 @@ import math
 import numpy
 
 from missilemap import Sighting
+from missilemap.analysis import expectation_maximization
 from missilemap.definitions import Target
+from missilemap.utils import closest_point, get_bearing, normalize_bearing, interpolate
+
 from .plotting import render
-from missilemap.utils import closest_point, get_bearing, normalize_bearing
 
 
 def random_sighting(location: Point, distance: float, azimuth: float) -> Sighting:
@@ -48,13 +50,15 @@ def random_sighting(location: Point, distance: float, azimuth: float) -> Sightin
     )
 
 
-def random_location(from_location, to_location, distance: float):
+def random_location(from_location, to_location, distance: float, random=_random):
     """
     Generate random locations along the specified path (with random distance from the path)
 
     :param from_location: Point or tuple (latitude, longitude)
     :param to_location: Point or tuple (latitude, longitude)
     :param distance: distance from the segment
+    :param random: random number generator (default is 'random' module)
+
     :return:
     """
     alpha = random.random()
@@ -69,12 +73,14 @@ def random_location(from_location, to_location, distance: float):
     return geopy.distance.distance(kilometers=distance).destination(pos, bearing=random.random() * 360)
 
 
-def _add_bearing_noise(bearing: float, noise: float) -> float:
+def _add_bearing_noise(bearing: float, noise: float, random=_random) -> float:
     """
     Add random bearing noise
 
     :param bearing: original bearing, radians [-pi..+pi]
     :param noise: max absolute noise (radians)
+    :param random: random number generator (default: random module)
+
     :return: modified bearing
     """
     return normalize_bearing(bearing + noise * (random.random() * 2 - 1))
@@ -129,12 +135,16 @@ class Simulator:
     def __init__(self,
                  targets: Sequence[Target], observers: Sequence[Observer],
                  field: Field = DEFAULT_FIELD,
-                 bearing_noise=DEFAULT_BEARING_NOISE):
+                 bearing_noise=DEFAULT_BEARING_NOISE,
+                 random=_random
+                 ):
+        self._random = random
         self.field = field
         self.targets = tuple(targets)
         self.observers = tuple(observers)
         self.bearing_noise = bearing_noise
         self.sightings = self._generate_sightings(self.targets, self.observers)
+        self.estimated = self._analyze_sightings(self.sightings)
 
     def _generate_sightings(self, targets: Sequence[Target], observers: Sequence[Observer]) -> Sequence[Sighting]:
         """
@@ -153,15 +163,15 @@ class Simulator:
 
         return sorted(result, key=lambda x: x.timestamp)
 
-    def _analyze_sightings(self, sightings: Sequence[Sighting]):
+    def _analyze_sightings(self, sightings: Sequence[Sighting]) -> Sequence[Target]:
         """
         Perform sighting analysis and generate predictions
 
         :param sightings: set of available sightings
         :return: list of predicted targets
         """
-
-        raise NotImplementedError()
+        # FIXME: implement more accurate analysis
+        return expectation_maximization(sightings=sightings, n_segments=3)
 
     def _get_sighting_for(self, target: Target, observer: Observer) -> Optional[Sighting]:
         """
@@ -186,22 +196,17 @@ class Simulator:
             )
             alpha = min(max(alpha, 0.0), 1.0)
 
-            segment_loc = (
-                segment_from.latitude * (1 - alpha) + segment_to.latitude * alpha,
-                segment_from.longitude * (1 - alpha) + segment_to.longitude * alpha
-            )
+            segment_loc = interpolate(segment_from, segment_to, alpha)
             d = distance(segment_loc, observer.location).meters
 
-            if d >= observer.radius:
-                if closest_sighting is not None:
-                    return closest_sighting
-                else:
-                    continue
+            # stop improving distance if moving outside the radius:
+            if d > observer.radius and closest_sighting is not None:
+                return closest_sighting
 
-            # select closest
-            if closest_sighting is None or d < closest_distance:
+            # select segment with the closest consecutive distance:
+            if d <= observer.radius and closest_sighting is None or d < closest_distance:
                 segment_time = distance(segment_from, segment_loc).meters / target.speed
-                segment_bearing = _add_bearing_noise(get_bearing(segment_from, segment_to), self.bearing_noise)
+                segment_bearing = _add_bearing_noise(get_bearing(segment_from, segment_to), self.bearing_noise, random=self._random)
 
                 closest_sighting = Sighting(
                     timestamp=total_time + segment_time,
