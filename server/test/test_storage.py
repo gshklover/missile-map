@@ -2,7 +2,6 @@
 Unit-testing for storage objects
 """
 
-import datetime
 from unittest import IsolatedAsyncioTestCase
 
 from missilemap.storage import get_storage

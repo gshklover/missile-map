@@ -145,6 +145,7 @@ def expectation_maximization(sightings: Sequence[Sighting], n_segments: int, ite
     time_range = (tim.min(), tim.max())
 
     # generate N random segments
+    # FIXME: alternatively, split sightings by time and estimate targets from them
     targets = [
         Target(
             start_time=time_range[0] + (time_range[1] - time_range[0]) * 0.6 * random.random(),

@@ -2,6 +2,8 @@
 Test utilities
 """
 import math
+import os.path
+import subprocess
 from unittest import TestCase
 
 from missilemap.utils import closest_point, get_bearing
@@ -76,4 +78,8 @@ class TestUtilities(TestCase):
         """
         Run flake8 to lint-clean the code
         """
-        pass
+        server_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+
+        subprocess.check_call([
+            'flake8', '--max-line-length', '150', server_dir
+        ])
