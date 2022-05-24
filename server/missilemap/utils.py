@@ -44,6 +44,8 @@ def closest_point(p1: Sequence[float], p2: Sequence[float], x: Sequence[float]) 
 def interpolate(p1: Point, p2: Point, alpha) -> Point:
     """
     Interpolate the segment (using linear interpolation).
+    NOTE: alpha is not limited to [0..1] range
+    FIXME: need to adjust this to use non-linear interpolation & account for wrap-around
 
     :param p1: start point
     :param p2: end point
