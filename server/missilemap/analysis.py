@@ -6,6 +6,7 @@ from geopy import Point
 from geopy.distance import distance
 import numpy
 import random
+from sklearn.mixture import GaussianMixture
 from typing import Sequence
 
 from .definitions import Sighting, Target, DEFAULT_SPEED
@@ -96,7 +97,7 @@ def _estimate_segment(sightings: Sequence[Sighting]) -> Target:
 def _sightings_to_targets(sightings: Sequence[Sighting],
                           targets: Sequence[Target]):
     """
-    Provided a list of sightigns and a list of targets, choose best target per sighting
+    Provided a list of sightings and a list of targets, choose best target per sighting
 
     :param sightings: list of sightings
     :param targets: list of targets
@@ -123,6 +124,27 @@ def _sightings_to_targets(sightings: Sequence[Sighting],
     return result
 
 
+def _random_target(sightings: Sequence[Sighting]) -> Target:
+    """
+    Generate a random segment by connecting two sightings together
+
+    :param sightings: list of sightings
+    :return: Target object with single segment path
+    """
+    start, end = None, None
+    while start == end:
+        start, end = random.choices(sightings, k=2)
+
+    if start.timestamp > end.timestamp:
+        start, end = end, start
+
+    return Target(
+        start_time=start.timestamp,
+        speed=DEFAULT_SPEED,
+        path=[start.location, end.location]
+    )
+
+
 def expectation_maximization(sightings: Sequence[Sighting], n_segments: int, iterations=10) -> Sequence[Target]:
     """
     Runs expectation maximization algorithm to partition sightings into segments.
@@ -135,33 +157,23 @@ def expectation_maximization(sightings: Sequence[Sighting], n_segments: int, ite
     """
     if len(sightings) < 2:
         return []
-
-    lat = numpy.array([s.latitude for s in sightings])
-    lon = numpy.array([s.longitude for s in sightings])
-    tim = numpy.array([s.timestamp for s in sightings])
-
-    lat_range = (lat.min(), lat.max())
-    lon_range = (lon.min(), lon.max())
-    time_range = (tim.min(), tim.max())
-
-    # generate N random segments
-    # FIXME: alternatively, split sightings by time and estimate targets from them
-    targets = [
-        Target(
-            start_time=time_range[0] + (time_range[1] - time_range[0]) * 0.6 * random.random(),
-            speed=DEFAULT_SPEED,
-            path=[
-                Point(latitude=random.randrange(*lat_range), longitude=random.randrange(*lon_range)),
-                Point(latitude=random.randrange(*lat_range), longitude=random.randrange(*lon_range))
-            ]
-        ) for _ in range(n_segments)
-    ]
-
     sightings = numpy.array(sightings)
+
+    m = GaussianMixture(n_components=n_segments)
+    target_idx = m.fit_predict(numpy.array([
+        [s.timestamp, s.latitude, s.longitude] for s in sightings
+    ])).flatten()
+
+    # # generate N random segments
+    targets = [_estimate_segment([s for i, s in zip(target_idx, sightings) if i == segment]) for segment in range(n_segments)]
 
     # run expectation maximization algorithm:
     for _ in range(iterations):
+        prev_idx = target_idx
         target_idx = numpy.array(_sightings_to_targets(sightings, targets))
+        if numpy.all(prev_idx == target_idx):
+            # stop if no change in assignment
+            break
 
         # now group by target and
         targets = [
@@ -172,15 +184,6 @@ def expectation_maximization(sightings: Sequence[Sighting], n_segments: int, ite
             # Add more segments.
             # FIXME: improve this part by approximating outliers
             for _ in range(len(targets), n_segments):
-                targets.append(
-                    Target(
-                        start_time=time_range[0] + (time_range[1] - time_range[0]) * 0.6 * random.random(),
-                        speed=DEFAULT_SPEED,
-                        path=[
-                            Point(latitude=random.randrange(*lat_range), longitude=random.randrange(*lon_range)),
-                            Point(latitude=random.randrange(*lat_range), longitude=random.randrange(*lon_range))
-                        ]
-                    )
-                )
+                targets.append(_random_target(sightings))
 
     return targets

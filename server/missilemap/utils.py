@@ -95,3 +95,25 @@ def normalize_bearing(bearing: float) -> float:
         bearing += two_pi
 
     return bearing
+
+
+class chain:
+    """
+    Chain-call functions with specified arguments one after another
+
+    Example:
+        >>> chain(partial(print, "A:"), partial(print, "B:"))('x')
+            A: x
+            B: x
+    """
+    __slots__ = ('_callables',)
+
+    def __init__(self, *callables):
+        # todo: consider flattening the list
+        self._callables = tuple(callables)
+
+    def __call__(self, *args, **kwargs):
+        val = None
+        for c in self._callables:
+            val = c(*args, **kwargs)
+        return val

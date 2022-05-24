@@ -21,6 +21,9 @@ The goal of the algorithm is to identify "targets" where each target is represen
 
 **Goal:** Find minimal set of targets & paths that minimize total observation error.
 
+For a **fixed number of segments N**, the algorithm can be formally defined as:<br>
+  Assign observations to N classes to minimize total distance between observation and corresponding target.
+
 ### Possible approaches:
 * Identify "temporally-related sightings" as those where *distance/delta_time* fits approximate target speed
   * Relies on some level of accuracy of sighting vs time
@@ -46,3 +49,8 @@ Variant: Expectation Maximization
   * Attach sightings to best segment
   * Re-estimate the segment based on attachment
   * Repeat last 2 steps until stop condition is met (improvement, for example)
+
+Variant: Sampling
+* Sample N points by time & location and define N initial segments
+* Grow N segments by adding points to them (time and location)
+* Prune & merge the segments until left with required number of segments
