@@ -94,8 +94,8 @@ def _estimate_segment(sightings: Sequence[Sighting]) -> Target:
     )
 
 
-def _sightings_to_targets(sightings: Sequence[Sighting],
-                          targets: Sequence[Target]):
+def sightings_to_targets(sightings: Sequence[Sighting],
+                         targets: Sequence[Target]):
     """
     Provided a list of sightings and a list of targets, choose best target per sighting
 
@@ -170,7 +170,7 @@ def expectation_maximization(sightings: Sequence[Sighting], n_segments: int, ite
     # run expectation maximization algorithm:
     for _ in range(iterations):
         prev_idx = target_idx
-        target_idx = numpy.array(_sightings_to_targets(sightings, targets))
+        target_idx = numpy.array(sightings_to_targets(sightings, targets))
         if numpy.all(prev_idx == target_idx):
             # stop if no change in assignment
             break

@@ -4,10 +4,11 @@ Test for analysis code
 import random
 from unittest import TestCase
 
+import numpy
 from geopy import Point
 
 from missilemap import Target
-from missilemap.analysis import expectation_maximization
+from missilemap.analysis import expectation_maximization, sightings_to_targets
 from simulator import Observer, random_location, Simulator
 
 
@@ -36,5 +37,10 @@ class TestAnalysis(TestCase):
         proj = expectation_maximization(
             sightings=sim.sightings,
             n_segments=len(path) - 1,
-            iterations=10
+            iterations=100
         )
+
+        # expected to reconstruct the original segments with 10 sightings per segment
+        res = sightings_to_targets(sightings=sim.sightings, targets=proj)
+        counts = numpy.bincount(res)
+        self.assertListEqual(list(counts), [10, 10, 10])

@@ -70,15 +70,17 @@ class Target:
 
         if timestamp <= self.start_time:
             if extrapolate:
-                meters = self.speed * (self.start_time - timestamp)
-                return distance(meters=meters).destination(self.path[1], bearing=get_bearing(self.path[0], self.path[1]))
+                return interpolate(self.path[0], self.path[1], (timestamp - self.start_time) / (self.end_time - self.start_time))
+                # meters = self.speed * (self.start_time - timestamp)
+                # return distance(meters=meters).destination(self.path[1], bearing=get_bearing(self.path[0], self.path[1]))
             else:
                 return None
 
         if timestamp >= self.end_time:
             if extrapolate:
-                meters = self.speed * (timestamp - self.end_time)
-                return distance(meters=meters).destination(self.path[-1], bearing=get_bearing(self.path[-2], self.path[-1]))
+                return interpolate(self.path[-2], self.path[-1], (timestamp - self.start_time) / (self.end_time - self.start_time))
+                # meters = self.speed * (timestamp - self.end_time)
+                # return distance(meters=meters).destination(self.path[-1], bearing=get_bearing(self.path[-2], self.path[-1]))
             else:
                 return None
 

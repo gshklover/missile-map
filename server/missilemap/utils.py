@@ -58,14 +58,14 @@ def interpolate(p1: Point, p2: Point, alpha) -> Point:
 
 def get_bearing(p1: Union[Point, Tuple[float, float]], p2: Union[Point, Tuple[float, float]]) -> float:
     """
-    Calculate approximate initial bearing for a segment from p1 to p2
+    Calculate approximate initial bearing (radians) for a segment from p1 to p2
 
     The formulae used is the following:
         θ = atan2(sin(Δlong).cos(lat2), cos(lat1).sin(lat2) − sin(lat1).cos(lat2).cos(Δlong))
 
     :param p1: Point or tuple [latitude, longitude]
     :param p2: Point or tuple [latitude, longitude]
-    :return: approximate bearing based on spherical model
+    :return: approximate bearing based on spherical model (radians)
     """
     # source: https://gist.github.com/jeromer/2005586 (public domain)
     lat1 = math.radians(p1[0])
