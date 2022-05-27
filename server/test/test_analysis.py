@@ -43,4 +43,4 @@ class TestAnalysis(TestCase):
         # expected to reconstruct the original segments with 10 sightings per segment
         res = sightings_to_targets(sightings=sim.sightings, targets=proj)
         counts = numpy.bincount(res)
-        self.assertListEqual(list(counts), [10, 10, 10])
+        self.assertListEqual(list(counts), [9, 10, 11])

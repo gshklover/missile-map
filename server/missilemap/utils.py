@@ -52,7 +52,7 @@ def interpolate(p1: Point, p2: Point, alpha) -> Point:
     :param alpha: value [0-1.0]
     :return: linearly interpolated point
     """
-    return Point(
+    return normalize_point(
         latitude=p1.latitude * (1 - alpha) + p2.latitude * alpha,
         longitude=p1.longitude * (1 - alpha) + p2.longitude * alpha
     )
@@ -97,6 +97,35 @@ def normalize_bearing(bearing: float) -> float:
         bearing += two_pi
 
     return bearing
+
+
+def normalize_point(latitude, longitude) -> Point:
+    """
+    Normalize point to be within acceptable range
+
+    :param latitude: latitude in degrees
+    :param longitude: longitude in degrees
+    """
+    while latitude > 90.0:
+        latitude -= 90
+        longitude += 180.0 if longitude < 0 else -180.0
+
+    while latitude < -90:
+        latitude += 90
+        longitude += 180.0 if longitude < 0 else -180.0
+
+    while longitude > 180.0:
+        longitude -= 180
+        latitude += 90.0 if latitude < 0 else -90.0
+
+    while longitude < -180.0:
+        longitude += 180
+        latitude += 90.0 if latitude < 0 else -90.0
+
+    return Point(
+        latitude=latitude,
+        longitude=longitude
+    )
 
 
 class chain:

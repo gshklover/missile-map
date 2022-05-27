@@ -3,7 +3,9 @@ Unit testing for REST server
 """
 import os
 import random
+import shutil
 import subprocess
+import tempfile
 import time
 from unittest import IsolatedAsyncioTestCase
 
@@ -28,6 +30,9 @@ class TestServer(IsolatedAsyncioTestCase):
         """
         Called once when initializing the tests
         """
+        # start mongodb (FIXME: need a way to pass configuration into server:app)
+        cls._tmp_dir = tempfile.mkdtemp(prefix='test_server')
+
         # start a server process
         cls._server = subprocess.Popen([
             'uvicorn', 'server:app', '--port', str(PORT)
@@ -45,6 +50,7 @@ class TestServer(IsolatedAsyncioTestCase):
         Called once after running the tests
         """
         cls._server.terminate()
+        shutil.rmtree(cls._tmp_dir)
 
     async def test_sightings(self):
         """
@@ -75,3 +81,9 @@ class TestServer(IsolatedAsyncioTestCase):
         result = self._api.list_sightings()
 
         self.assertListEqual(result, sightings)
+
+    async def test_targets(self):
+        """
+        Test querying identified targets
+        """
+        pass

@@ -7,7 +7,7 @@ from odmantic import Model as BaseModel
 from typing import Sequence, Optional
 
 # timestamps are seconds since epoch (mostly using ints)
-from missilemap.utils import get_bearing, interpolate
+from missilemap.utils import interpolate
 
 Timestamp = int
 
@@ -20,7 +20,14 @@ class Target:
     Base class for simulated targets.
     A target moves along a specified path with a fixed speed.
     """
+
     __slots__ = ('start_time', 'speed', 'path', 'distances', 'end_time')
+
+    start_time: Timestamp  # start time in seconds since epoch
+    end_time: Timestamp    # end time (when target reaches the end of the path)
+    speed: float           # target speed in m/sec
+    path: Sequence[Point]  # target path
+    distance: float        # total path distance (meters)
 
     def __init__(self, start_time: Timestamp = 0, speed: float = DEFAULT_SPEED, path: Sequence[Point] = None):
         """
@@ -31,6 +38,8 @@ class Target:
         :param speed: target speed (m/sec)
         :param path: target path [(lat, long), ...]
         """
+        super().__init__()
+
         self.start_time = start_time
         self.speed = speed
         self.path = tuple(path) if path else tuple()

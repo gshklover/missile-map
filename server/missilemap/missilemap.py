@@ -1,20 +1,95 @@
 """
 Core logic implementation for missile map application
 """
+import asyncio
 from typing import Sequence
 
-from . import Sighting
+from .definitions import Sighting, Target
+from .analysis import analyze_sightings
 from .storage import ISightingStorage
 
 
-class MissileMap:
+class AsyncServer:
     """
-    Core logic implementation for missile map server
+    Base class for asynchronous server implementation with support for services
+    """
+    def __init__(self):
+        # async services support
+        self._shutting_down = asyncio.Event()  # set when shutdown process is initiated
+        self._services = []  # list of tasks representing current services
+
+    async def shutdown(self):
+        """
+        Shutdown any running services and wait for completion.
+        """
+        self._shutting_down.set()
+        while len(self._services):
+            await self._services.pop()
+
+    def run_service(self, func, period=None, name=None):
+        """
+        Runs specified co-routine as a service
+
+        :param func: async routine
+        :param period: (optional) if specified, will execute specified routine with specified period (seconds)
+        :param name: (optional) task name
+
+        :return:
+        """
+        if period is not None:
+            task = asyncio.get_running_loop().create_task(self._run_periodic(func, period), name=name)
+        else:
+            task = asyncio.get_running_loop().create_task(func(), name=name)
+
+        self._services.append(task)
+        # TODO: filter out completed tasks from self._services
+
+    async def _run_periodic(self, func, period):
+        """
+        Runs specified co-routine with specified period
+
+        :param func: function to run
+        :param period: period (seconds)
+        """
+        while not self._shutting_down.is_set():
+            try:
+                await asyncio.wait_for(self._shutting_down.wait(), timeout=period)
+            except asyncio.TimeoutError:
+                await func()
+            else:
+                break
+
+
+class MissileMap(AsyncServer):
+    """
+    Core logic implementation for missile map server.
+    Uses dependency injection for main components such as sightings storage.
+
+    The implementation is asynchronous: services run in a loop until shutdown is called.
     """
     TARGET_SPEED_RANGE = (700000/3600, 1000000/3600)  # target speed range (min, max)
 
+    analysis_threshold = 1.0  # minimum time (seconds) between analysis rounds
+
+    @property
+    def storage(self) -> ISightingStorage:
+        """
+        Returns sightings storage object
+        """
+        return self._storage
+
     def __init__(self, storage: ISightingStorage):
+        """
+        Initializes MissileMap object
+
+        :param storage: storage for sightings
+        """
+        super().__init__()
         self._storage = storage
+        self._targets = []
+
+        # create a service that will run periodic analysis
+        self._analysis_task = None
 
     async def add_sighting(self, sighting: Sighting) -> Sighting:
         """
@@ -23,13 +98,24 @@ class MissileMap:
         :param sighting:
         :return: the sighting object
         """
-        return await self._storage.add_sighting(sighting)
+        res = await self._storage.add_sighting(sighting)
+
+        if self._analysis_task is None:
+            self._analysis_task = asyncio.get_running_loop().create_task(self._analysis_service())
+
+        return res
 
     async def list_sightings(self) -> Sequence[Sighting]:
         """
         Get list of reported sightings
         """
         return await self._storage.list_sightings()
+
+    async def list_targets(self) -> Sequence[Target]:
+        """
+        Get current list of identified targets
+        """
+        return self._targets
 
     async def register_user(self, User):
         """
@@ -40,13 +126,20 @@ class MissileMap:
         """
         raise NotImplementedError()
 
-    def analyze_sightings(self, sightings):
+    async def _analysis_service(self):
         """
-        Analyze specified sightings and produce predicted set of targets
+        Runs periodic analysis on the set of sightings.
 
-        :param sightings:
-        :return:
+        FIXME: use separate process to run the computation
         """
-        # estimate number of linear segments
+        while True:
+            await asyncio.sleep(self.analysis_threshold)
+            sightings = await self.list_sightings()
+            self._targets = analyze_sightings(sightings)
 
-        raise NotImplementedError()
+    async def _cleanup_service(self):
+        """
+        Runs periodic cleanup for the sightings
+        """
+        while True:
+            pass

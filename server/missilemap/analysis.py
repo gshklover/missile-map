@@ -1,5 +1,5 @@
 """
-Analysis algorithms to support the application
+Analysis algorithms to support the core application logic
 """
 import math
 from geopy import Point
@@ -11,6 +11,8 @@ from typing import Sequence
 
 from .definitions import Sighting, Target, DEFAULT_SPEED
 from .utils import logger
+
+MAX_SEGMENTS = 1000
 
 
 def _estimate_segment(sightings: Sequence[Sighting]) -> Target:
@@ -94,13 +96,13 @@ def _estimate_segment(sightings: Sequence[Sighting]) -> Target:
     )
 
 
-def sightings_to_targets(sightings: Sequence[Sighting],
-                         targets: Sequence[Target]):
+def sightings_to_targets(sightings: Sequence[Sighting], targets: Sequence[Target], with_distance=False):
     """
     Provided a list of sightings and a list of targets, choose best target per sighting
 
     :param sightings: list of sightings
     :param targets: list of targets
+    :param with_distance: if True, return tuples of (idx, distance) otherwise returns idx only
 
     Returns a list of assigned target indices.
 
@@ -119,7 +121,10 @@ def sightings_to_targets(sightings: Sequence[Sighting],
                 best_dist = d
                 best_idx = idx
 
-        result.append(best_idx)
+        if with_distance:
+            result.append((best_idx, best_dist))
+        else:
+            result.append(best_idx)
 
     return result
 
@@ -145,7 +150,7 @@ def _random_target(sightings: Sequence[Sighting]) -> Target:
     )
 
 
-def expectation_maximization(sightings: Sequence[Sighting], n_segments: int, iterations=10) -> Sequence[Target]:
+def expectation_maximization(sightings: Sequence[Sighting], n_segments: int, iterations=100) -> Sequence[Target]:
     """
     Runs expectation maximization algorithm to partition sightings into segments.
 
@@ -185,5 +190,33 @@ def expectation_maximization(sightings: Sequence[Sighting], n_segments: int, ite
             # FIXME: improve this part by approximating outliers
             for _ in range(len(targets), n_segments):
                 targets.append(_random_target(sightings))
+
+    return targets
+
+
+def analyze_sightings(sightings: Sequence[Sighting]) -> Sequence[Target]:
+    """
+    Analyze specified set of sightings and generate a set of Target objects
+
+    :param sightings: set of sightings to analyze
+    :return: set of Target objects that correspond to the provided targets
+
+    The function attempts to find a number of individual segments that explain the sightings with some tolerance to outliers.
+
+    """
+    if len(sightings) < 2:
+        return []
+
+    MAX_DISTANCE = 10000
+
+    # analyze individual segments
+    targets = []
+    for n_seg in range(1, MAX_SEGMENTS):
+        targets = expectation_maximization(sightings, n_segments=n_seg)
+        assignment = sightings_to_targets(sightings=sightings, targets=targets, with_distance=True)
+        if all([a[1] < MAX_DISTANCE for a in assignment]):
+            break
+
+    # TODO: join individual segments
 
     return targets

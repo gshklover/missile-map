@@ -13,12 +13,32 @@ class ISightingStorage(ABC):
     """
     Sighting storage interface (asynchronous)
     """
+    @property
+    def checksum(self) -> int:
+        """
+        Returns a number representing checksum that changes when sightings are added/removed
+        """
+        raise NotImplementedError()
+
     @abstractmethod
     async def add_sighting(self, sighting: Sighting) -> Sighting:
+        """
+        Adds a new sighting to the storage
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
+    async def remove_sighting(self, sighting: Sighting):
+        """
+        Removes an existing sighting from the storage
+        """
         raise NotImplementedError()
 
     @abstractmethod
     async def list_sightings(self) -> Sequence[Sighting]:
+        """
+        List current set of sightings
+        """
         raise NotImplementedError()
 
 
@@ -32,13 +52,26 @@ class MemoryStorage(ISightingStorage):
         Initialize the object
         """
         self._sightings = {}
+        self._checksum = 0
+
+    @property
+    def checksum(self) -> int:
+        return self._checksum
 
     async def add_sighting(self, sighting: Sighting):
         """
         Add a sighting to in-memory storage
         """
         self._sightings[sighting.id] = sighting
+        self._checksum += 1
         return sighting
+
+    async def remove_sighting(self, sighting: Sighting):
+        """
+        Removes a sighting from the storage
+        """
+        self._sightings.pop(sighting.id)
+        self._checksum += 1
 
     async def list_sightings(self) -> Sequence[Sighting]:
         """
@@ -53,6 +86,14 @@ class MongoDBStorage(ISightingStorage):
     """
     def __init__(self, db: AIOEngine):
         self.db = db
+        self._checksum = 0
+
+    @property
+    def checksum(self) -> int:
+        """
+        Checksum is incremented on add/remove calls
+        """
+        return self._checksum
 
     async def add_sighting(self, sighting: Sighting):
         """
@@ -60,7 +101,16 @@ class MongoDBStorage(ISightingStorage):
 
         :param sighting: sighting object
         """
-        return await self.db.save(sighting)
+        res = await self.db.save(sighting)
+        self._checksum += 1
+        return res
+
+    async def remove_sighting(self, sighting: Sighting):
+        """
+        Remove specified sighting from the storage
+        """
+        await self.db.delete(sighting)
+        self._checksum += 1
 
     async def list_sightings(self) -> Sequence[Sighting]:
         """
