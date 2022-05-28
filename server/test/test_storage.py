@@ -32,10 +32,10 @@ class TestStorage(IsolatedAsyncioTestCase):
         Test storing and retrieving sighting objects
         """
         items = [
-            Sighting(timestamp=1234, latitude=1, longitude=2, azimuth=0.1),
-            Sighting(timestamp=2345, latitude=2, longitude=3, azimuth=0.2)
+            Sighting(timestamp=1234, latitude=1, longitude=2, bearing=0.1),
+            Sighting(timestamp=2345, latitude=2, longitude=3, bearing=0.2)
         ]
-        db = get_storage('test')
+        db = get_storage('test').db
 
         # cleanup:
         await db.get_collection(Sighting).drop()

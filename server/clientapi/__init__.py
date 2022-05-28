@@ -1,7 +1,7 @@
 """
 Client-side REST API for accessing the server
 """
-from typing import List, Sequence
+from typing import Sequence
 
 from http import HTTPStatus
 import requests

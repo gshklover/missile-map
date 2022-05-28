@@ -17,7 +17,8 @@ from clientapi import ClientAPI
 from missilemap import Sighting, Target
 from missilemap.storage import get_storage
 from simulator import Observer, Simulator, random_location
-from .mongoutils import start_mongodb, stop_mongodb
+
+from test.mongoutils import start_mongodb, stop_mongodb
 
 PROJ_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 PORT = 8000
