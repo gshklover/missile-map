@@ -2,9 +2,10 @@
 Object storage support
 """
 from abc import ABC, abstractmethod
+from motor.motor_asyncio import AsyncIOMotorClient
+from odmantic import AIOEngine
 from typing import Sequence
 
-from odmantic import AIOEngine
 
 from missilemap import Sighting
 
@@ -119,11 +120,13 @@ class MongoDBStorage(ISightingStorage):
         return await self.db.find(model=Sighting)
 
 
-def get_storage(database='missilemap') -> ISightingStorage:
+def get_storage(url='mongodb://localhost:21017', database='missilemap') -> ISightingStorage:
     """
     Get model storage backend.
 
+    :param url: MongoDB URL (default: mongodb://localhost:27017)
     :param database: database name to use
     """
     # object database
-    return MongoDBStorage(db=AIOEngine(database=database))
+    client = AsyncIOMotorClient(url)
+    return MongoDBStorage(db=AIOEngine(motor_client=client, database=database))

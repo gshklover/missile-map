@@ -117,7 +117,7 @@ class Sighting(BaseModel):
     """
     Defines a single sighting
     """
-    timestamp: int = 0             # sighting timestamp (in seconds since epoch)
+    timestamp: int                 # sighting timestamp (in seconds since epoch)
     latitude: float                # location latitude (degrees)
     longitude: float               # location longitude (degrees)
     bearing: float                 # flight direction relative to north pole [-pi..pi]

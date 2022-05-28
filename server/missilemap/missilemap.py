@@ -69,7 +69,8 @@ class MissileMap(AsyncServer):
     """
     TARGET_SPEED_RANGE = (700000/3600, 1000000/3600)  # target speed range (min, max)
 
-    analysis_threshold = 1.0  # minimum time (seconds) between analysis rounds
+    _analysis_interval = 1.0  # minimum time (seconds) between analysis rounds
+    _cleanup_interval = 3.0   # time between cleanup intervals
 
     @property
     def storage(self) -> ISightingStorage:
@@ -89,7 +90,8 @@ class MissileMap(AsyncServer):
         self._targets = []
 
         # create a service that will run periodic analysis
-        self._analysis_task = None
+        self.run_service(self._analysis_service, period=self._analysis_interval)
+        self.run_service(self._cleanup_service, period=self._cleanup_interval)
 
     async def add_sighting(self, sighting: Sighting) -> Sighting:
         """
@@ -98,12 +100,7 @@ class MissileMap(AsyncServer):
         :param sighting:
         :return: the sighting object
         """
-        res = await self._storage.add_sighting(sighting)
-
-        if self._analysis_task is None:
-            self._analysis_task = asyncio.get_running_loop().create_task(self._analysis_service())
-
-        return res
+        return await self._storage.add_sighting(sighting)
 
     async def list_sightings(self) -> Sequence[Sighting]:
         """
@@ -132,14 +129,10 @@ class MissileMap(AsyncServer):
 
         FIXME: use separate process to run the computation
         """
-        while True:
-            await asyncio.sleep(self.analysis_threshold)
-            sightings = await self.list_sightings()
-            self._targets = analyze_sightings(sightings)
+        self._targets = analyze_sightings(await self.list_sightings())
 
     async def _cleanup_service(self):
         """
         Runs periodic cleanup for the sightings
         """
-        while True:
-            pass
+        pass
