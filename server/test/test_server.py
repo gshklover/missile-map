@@ -1,6 +1,7 @@
 """
 Unit testing for REST server
 """
+import asyncio
 import json
 import os
 import random
@@ -10,9 +11,12 @@ import tempfile
 from unittest import IsolatedAsyncioTestCase
 
 # requires "Mark directory as -> Source root on top level directory"
+from geopy import Point
+
 from clientapi import ClientAPI
-from missilemap import Sighting
+from missilemap import Sighting, Target
 from missilemap.storage import get_storage
+from simulator import Observer, Simulator, random_location
 from .mongoutils import start_mongodb, stop_mongodb
 
 PROJ_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -69,15 +73,24 @@ class TestServer(IsolatedAsyncioTestCase):
         cls._server.terminate()
         stop_mongodb()
 
-    async def test_sightings(self):
+    async def asyncSetUp(self) -> None:
         """
-        Test inserting sightings
+        This code is executed before every test.
         """
-        # cleanup test DB:
+        await self._clean_sightings()  # cleanup sightings before executing any tests
+
+    async def _clean_sightings(self):
+        """
+        Clean sightings DB
+        """
         storage = get_storage(url=f"mongodb://localhost:{self._db_port}", database=TEST_DB)
         db = storage.db  # noqa. Assuming it is MongoDBStorage.
         await db.get_collection(Sighting).drop()
 
+    async def test_sightings(self):
+        """
+        Test inserting sightings
+        """
         sightings = [
             Sighting(
                 timestamp=random.randint(0, 10000),
@@ -96,15 +109,59 @@ class TestServer(IsolatedAsyncioTestCase):
         for s in sightings:
             self._api.add_sighting(s)
 
+        storage = get_storage(url=f"mongodb://localhost:{self._db_port}", database=TEST_DB)
         result = sorted(await storage.list_sightings(), key=lambda x: x.timestamp)
-        # result = self._api.list_sightings()
+
         self.assertListEqual(result, sorted(sightings, key=lambda x: x.timestamp))
 
     async def test_targets(self):
         """
         Test querying identified targets
         """
-        pass
-        # db = get_storage('test').db  # noqa. Assuming it is MongoDBStorage.
-        # await db.get_collection(Sighting).drop()
+        r = random.Random(12345)
 
+        # generate sightings using simulator object:
+        path = [
+            Point(45.361285195897885, 33.90794799044153),
+            Point(47.487079766379715, 33.081535775384715),
+            Point(49.47728424495352, 27.901909920451157),
+            Point(49.83269083681804, 24.09401307480089)
+        ]
+
+        path2 = [
+            Point(45.361285195897885, 33.90794799044153),
+            Point(49.3, 33.081535775384715),
+            Point(50.3, 28.3)
+        ]
+
+        # generate observer locations:
+        DEFAULT_RADIUS = 5000
+        observers = []
+
+        for p_from, p_to in zip(path[:-1], path[1:]):
+            for _ in range(10):
+                observers.append(Observer(location=random_location(p_from, p_to, DEFAULT_RADIUS, random=r), radius=DEFAULT_RADIUS))
+
+        for p_from, p_to in zip(path2[:-1], path2[1:]):
+            for _ in range(10):
+                observers.append(Observer(location=random_location(p_from, p_to, DEFAULT_RADIUS, random=r), radius=DEFAULT_RADIUS))
+
+        sim = Simulator(targets=[
+            Target(path=path, start_time=0),
+            Target(path=path2, start_time=30),
+        ], observers=observers, random=r)
+
+        # push sightings to the server:
+        sightings = sim.sightings
+        for s in sightings:
+            self._api.add_sighting(s)
+
+        # wait for the sightings to be analyzed
+        targets = []
+        for i in range(5):
+            await asyncio.sleep(1)
+            targets = self._api.list_targets()
+            if len(targets):
+                break
+
+        self.assertEqual(5, len(targets))

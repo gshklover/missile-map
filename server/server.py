@@ -5,7 +5,16 @@ Run:
     uvicorn server:app --reload
 
 Environment variables:
-    MISSILEMAP_DATABASE - database name to use (default: 'missilemap')
+    MISSILEMAP_CONFIG - server configuration file path
+
+Config file structure:
+    {
+        'testing': False,
+        'mongodb: {
+            'url': 'mongodb://localhost:21017',
+            'db_name': 'missilemap'
+        }
+    }
 """
 import json
 import time
@@ -32,7 +41,9 @@ def load_config():
     return {}
 
 
-# global application configuration:
+# =================================
+# Global application configuration:
+# =================================
 config = load_config()
 TESTING = config.get('testing', False)
 
@@ -42,13 +53,21 @@ app = FastAPI(
     description="MissileMap REST API server"
 )
 
-# initialize DB storage:
+# ======================
+# Initialize DB storage:
+# ======================
 db_url = config.get('mongodb', {}).get('url', DEFAULT_DB_URL)
 db_name = config.get('mongodb', {}).get('db_name', DEFAULT_DB_NAME)
 storage = get_storage(url=db_url, database=db_name)  # odmantic object storage
 
-# initialize core application logic:
-core = MissileMap(storage=storage)
+# ===================================
+# Initialize core application logic:
+# ===================================
+extra_args = {}
+if TESTING:
+    extra_args['cleanup_interval'] = -1
+
+core = MissileMap(storage=storage, **extra_args)
 
 
 # @app.get('/sightings')

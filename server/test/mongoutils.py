@@ -1,6 +1,7 @@
 """
 Utilities for running unittests with MongoDB
 """
+import os
 import random
 import shutil
 import subprocess
@@ -44,8 +45,14 @@ def start_mongodb():
 
     # start mongodb (FIXME: need a way to pass configuration into server:app)
     _TMP_DIR = tempfile.mkdtemp(prefix='test_server')
+    log_file = os.path.join(_TMP_DIR, 'mongodb.log')
     _PORT = select_port()
-    _SERVER = subprocess.Popen(['mongod', '--dbpath', _TMP_DIR, '--port', str(_PORT)])
+
+    print(f"INFO: Starting MongoDB with port={_PORT}. Log file: {log_file}")
+
+    with open(log_file, 'w') as log_stream:
+        _SERVER = subprocess.Popen(['mongod', '--dbpath', _TMP_DIR, '--port', str(_PORT)], stdout=log_stream, stderr=log_stream)
+
     # TODO: wait for the process to start
     return _PORT
 

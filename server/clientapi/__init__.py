@@ -1,13 +1,13 @@
 """
 Client-side REST API for accessing the server
 """
-from typing import List
+from typing import List, Sequence
 
 from http import HTTPStatus
 import requests
 import urllib.parse
 
-from missilemap import Sighting
+from missilemap import Sighting, Target
 
 
 class ClientAPI:
@@ -39,11 +39,21 @@ class ClientAPI:
             'id': str(sighting.id)
         }))
 
-    def list_sightings(self) -> List[Sighting]:
+    def list_targets(self) -> Sequence[Target]:
         """
-        List all sightings
+        List current set of known targets
+
+        :return: list of targets
         """
-        return [Sighting(**d) for d in self._get('/sightings')]
+        return [
+            Target(**t) for t in self._get('/targets')
+        ]
+
+    # def list_sightings(self) -> List[Sighting]:
+    #     """
+    #     List all sightings
+    #     """
+    #     return [Sighting(**d) for d in self._get('/sightings')]
 
     def _post(self, endpoint, json=None, params=None) -> dict:
         """

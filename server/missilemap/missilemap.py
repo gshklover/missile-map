@@ -8,6 +8,9 @@ from .definitions import Sighting, Target
 from .analysis import analyze_sightings
 from .storage import ISightingStorage
 
+DEFAULT_CLEANUP_INTERVAL = 3.0   # time between cleanup intervals
+DEFAULT_ANALYSIS_INTERVAL = 1.0  # minimum time (seconds) between analysis rounds
+
 
 class AsyncServer:
     """
@@ -69,9 +72,6 @@ class MissileMap(AsyncServer):
     """
     TARGET_SPEED_RANGE = (700000/3600, 1000000/3600)  # target speed range (min, max)
 
-    _analysis_interval = 1.0  # minimum time (seconds) between analysis rounds
-    _cleanup_interval = 3.0   # time between cleanup intervals
-
     @property
     def storage(self) -> ISightingStorage:
         """
@@ -79,19 +79,24 @@ class MissileMap(AsyncServer):
         """
         return self._storage
 
-    def __init__(self, storage: ISightingStorage):
+    def __init__(self, storage: ISightingStorage,
+                 analysis_interval: float = DEFAULT_ANALYSIS_INTERVAL,
+                 cleanup_interval: float = DEFAULT_CLEANUP_INTERVAL):
         """
         Initializes MissileMap object
 
         :param storage: storage for sightings
+        :param cleanup_interval: if > 0, specified time (seconds) between sightings cleanup intervals
         """
         super().__init__()
         self._storage = storage
         self._targets = []
 
         # create a service that will run periodic analysis
-        self.run_service(self._analysis_service, period=self._analysis_interval)
-        self.run_service(self._cleanup_service, period=self._cleanup_interval)
+        if analysis_interval > 0:
+            self.run_service(self._analysis_service, period=analysis_interval)
+        if cleanup_interval > 0:
+            self.run_service(self._cleanup_service, period=cleanup_interval)
 
     async def add_sighting(self, sighting: Sighting) -> Sighting:
         """
