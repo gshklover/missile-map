@@ -7,7 +7,6 @@ import math
 import numpy
 from typing import Sequence, Union, Tuple
 
-
 logger = logging.Logger('missilemap')
 
 

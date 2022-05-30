@@ -2,7 +2,7 @@
 Core logic implementation for missile map application
 """
 import asyncio
-from typing import Sequence
+from typing import Sequence, List
 
 from .definitions import Sighting, Target
 from .analysis import analyze_sightings
@@ -113,7 +113,7 @@ class MissileMap(AsyncServer):
         """
         return await self._storage.list_sightings()
 
-    async def list_targets(self) -> Sequence[Target]:
+    async def list_targets(self) -> List[Target]:
         """
         Get current list of identified targets
         """

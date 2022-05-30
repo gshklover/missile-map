@@ -1,6 +1,7 @@
 """
 Type definitions for missile-map core package
 """
+import dataclasses
 from geopy import Point
 from geopy.distance import distance
 from odmantic import Model as BaseModel
@@ -15,19 +16,16 @@ Timestamp = int
 DEFAULT_SPEED = 800000/3600
 
 
+@dataclasses.dataclass(init=False)
 class Target:
     """
     Base class for simulated targets.
     A target moves along a specified path with a fixed speed.
     """
-
-    __slots__ = ('start_time', 'speed', 'path', 'distances', 'end_time')
-
     start_time: Timestamp  # start time in seconds since epoch
     end_time: Timestamp    # end time (when target reaches the end of the path)
     speed: float           # target speed in m/sec
     path: Sequence[Point]  # target path
-    distance: float        # total path distance (meters)
 
     def __init__(self, start_time: Timestamp = 0, speed: float = DEFAULT_SPEED, path: Sequence[Point] = None):
         """
@@ -111,6 +109,30 @@ class Target:
 
     def __repr__(self) -> str:
         return self.__str__()
+
+    @staticmethod
+    def json_encoder(target):
+        """
+        Converts Target to json
+        """
+        return {
+            'start_time': target.start_time,
+            'speed': target.speed,
+            'path': [
+                [p.latitude, p.longitude] for p in target.path
+            ]
+        }
+
+    @staticmethod
+    def json_decoder(json_obj: dict):
+        """
+        Converts JSON to Target
+        """
+        return Target(
+            start_time=Timestamp(json_obj['start_time']),
+            speed=float(json_obj['speed']),
+            path=[Point(*p) for p in json_obj['path']]
+        )
 
 
 class Sighting(BaseModel):

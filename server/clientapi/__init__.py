@@ -46,7 +46,7 @@ class ClientAPI:
         :return: list of targets
         """
         return [
-            Target(**t) for t in self._get('/targets')
+            Target.json_decoder(t) for t in self._get('/targets')
         ]
 
     # def list_sightings(self) -> List[Sighting]:

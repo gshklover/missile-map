@@ -16,18 +16,28 @@ Config file structure:
         }
     }
 """
+import geopy
+from fastapi import FastAPI, status
+from fastapi.encoders import jsonable_encoder
 import json
 import time
 import os
+from typing import List
 
-from fastapi import FastAPI, status
-from missilemap import Sighting, MissileMap
+
+from missilemap import Sighting, MissileMap, Target
 from missilemap.storage import get_storage
+
 
 CONFIG_NAME = 'MISSILEMAP_CONFIG'
 DEFAULT_DB_URL = 'mongodb://localhost:21017'
 DEFAULT_DB_NAME = 'missilemap'
 TESTING = False
+
+# custom JSON encoders
+CUSTOM_ENCODER = {
+    Target: Target.json_encoder
+}
 
 
 def load_config():
@@ -91,11 +101,11 @@ async def _post_sighting(sighting: Sighting):
 
 
 @app.get('/targets')
-async def _get_targets():
+async def _get_targets() -> List[Target]:
     """
     Get list of currently identified targets
     """
-    return await core.list_targets()
+    return jsonable_encoder(await core.list_targets(), custom_encoder=CUSTOM_ENCODER)
 
 
 # @app.post('/register')
