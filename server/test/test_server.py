@@ -167,4 +167,6 @@ class TestServer(IsolatedAsyncioTestCase):
 
         print([t.to_json() for t in targets])
 
+        # await asyncio.sleep(1000)
+
         self.assertEqual(5, len(targets))

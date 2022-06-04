@@ -5,14 +5,15 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
-// import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
 import android.view.Menu
 import android.view.MenuItem
@@ -29,14 +30,14 @@ import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
 import com.google.android.gms.location.*
-// import com.google.android.gms.location.LocationListener
 import com.google.gson.*
 import org.json.JSONObject
 import kotlin.math.min
 
 
 val DEFAULT_ZOOM : Float = 10.0f   // default map zoom
-val UPDATE_RATE_MS : Long = 100    // minimum time (ms) between map updates
+val MAP_UPDATE_RATE_MS : Long = 100     // minimum time (ms) between map updates
+val TARGET_UPDATE_RATE_MS : Long = 3000 // minimum time (ms) between polling the server
 val POST_URL = "http://10.0.2.2:8000/sightings"
 val GET_URL = "http://10.0.2.2:8000/targets"
 
@@ -45,12 +46,12 @@ val GET_URL = "http://10.0.2.2:8000/targets"
  * Geo-location
  */
 class Point (
-    val latitude: Float,
-    val longitude: Float
+    val latitude: Double,
+    val longitude: Double
 ) {}
 
 /**
- * Defines a target
+ * Defines a tracked target
  */
 class Target (
     val startTime: Int,
@@ -75,10 +76,11 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
     private lateinit var mMap: GoogleMap          // reference to google map object
     private lateinit var mMapPos: Marker          // current position marker on the map
     private var mLastUpdateTime: Long = 0         // last update time mMap
-    private var mTargets : Array<Target> = arrayOf()  // list of known targets
+    private var mTargetMarkers : Array<Polyline> = arrayOf() // list of markers used to render targets
 
     // sensor readings:
     private lateinit var mLocationClient: FusedLocationProviderClient // location client
+    private lateinit var mLocationCallback: LocationCallback // location callback for FusedLocationClient
     private val mGravity = FloatArray(3) { _ -> 0.0f }      // current accelerometer reading
     private val mGeomagnetic = FloatArray(3) { _ -> 0.0f }  // current magnetic sensor reading
     private var mLocation : Location? = null                     // current location
@@ -86,10 +88,14 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
 
     // handling requests:
     private lateinit var mRequestQueue : RequestQueue      // REST request queue
-    private lateinit var mLocationCallback: LocationCallback // location callback for FusedLocationClient
+    private lateinit var mUpdateTask : Runnable            // periodic update task
+
+    // model objects:
+    private var mTargets : Array<Target> = arrayOf()  // list of known targets
 
     // called when the activity is first created
     override fun onCreate(savedInstanceState: Bundle?) {
+        val parent = this
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.toolbar))
@@ -98,9 +104,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
         mReportButton.isEnabled = false
 
         mRequestQueue = Volley.newRequestQueue(this)
+        mUpdateTask = Runnable { parent.onUpdate() }
 
         mLocationClient = LocationServices.getFusedLocationProviderClient(this)
-        val parent = this
         mLocationCallback = object: LocationCallback() {
             override fun onLocationResult(location: LocationResult) {
                 parent.onLocationResult(location)
@@ -130,6 +136,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
         sensorManager.registerListener(this, sensorMagnetic, SensorManager.SENSOR_DELAY_NORMAL)
 
         requestLocation()
+        scheduleUpdate()
     }
 
     // called when main activity is paused (no in foreground)
@@ -141,8 +148,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
 
         mLocationClient.removeLocationUpdates(mLocationCallback)
 
-//        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-//        locationManager.removeUpdates(this)
+        Handler(Looper.getMainLooper()).removeCallbacks(mUpdateTask)
     }
 
     // called to populate options menu
@@ -164,16 +170,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
     }
 
     // called by LocationManager when location changes
-    /* override fun onLocationChanged(location: Location) {
-        mReportButton.isEnabled = true
-        mLocation = location
-        updateText()
-    }
-    */
-
     fun onLocationResult(location: LocationResult) {
         mReportButton.isEnabled = true
         mLocation = location.lastLocation
+//        mLocation = Location(LocationManager.GPS_PROVIDER)
+//        mLocation?.latitude = 47.487079766379715
+//        mLocation?.longitude = 33.081535775384715
         updateText()
     }
 
@@ -264,7 +266,7 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
 
         if (::mMap.isInitialized && latitude != null && longitude != null) {
             val currentTime = System.currentTimeMillis()
-            if (currentTime < mLastUpdateTime || currentTime > mLastUpdateTime + UPDATE_RATE_MS) {
+            if (currentTime < mLastUpdateTime || currentTime > mLastUpdateTime + MAP_UPDATE_RATE_MS) {
                 mLastUpdateTime = currentTime
                 val currentPos = mMap.cameraPosition
                 val newPos = CameraPosition(
@@ -284,6 +286,28 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
     // update list of targets
     private fun updateTargets(targets: Array<Target>) {
         mTargets = targets
+
+        // clear markers
+        for (m in mTargetMarkers) {
+            m.remove()
+        }
+        mTargetMarkers = arrayOf()
+
+        if (::mMap.isInitialized) {
+            // remove / update markers on the map
+            val polylines = mutableListOf<Polyline>()
+
+            for (t in targets) {
+                polylines.add(mMap.addPolyline(
+                    PolylineOptions()
+                    .color(Color.RED)
+                    .width(5f)
+                    .addAll( t.path.map { p -> LatLng(p.latitude, p.longitude) }
+                )))
+            }
+
+            mTargetMarkers = polylines.toTypedArray()
+        }
     }
 
     // called when the GoogleMap object is ready
@@ -307,6 +331,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
             mMapPos = marker
         }
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), DEFAULT_ZOOM));
+
+        scheduleUpdate()
     }
 
     // compute default marker size for the map
@@ -339,13 +365,22 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
         mRequestQueue.add(request)
     }
 
+    // schedule a periodic update
+    private fun scheduleUpdate() {
+        val handler = Handler(Looper.getMainLooper())
+        handler.removeCallbacks(mUpdateTask)
+        handler.postDelayed(mUpdateTask, TARGET_UPDATE_RATE_MS)
+    }
+
     // update list of known targets on the map
     private fun onUpdate() {
         val url = GET_URL
         val request = JsonArrayRequest(Request.Method.GET, url, null, { response ->
             this.updateTargets(getGson().fromJson(response.toString(), Array<Target>::class.java))
+            this.scheduleUpdate()
         }, { error ->
             error.printStackTrace()
+            this.scheduleUpdate()
         })
         mRequestQueue.add(request)
     }
