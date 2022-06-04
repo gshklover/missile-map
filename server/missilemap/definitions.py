@@ -111,16 +111,14 @@ class Target:
         return self.__str__()
 
     @staticmethod
-    def json_encoder(target):
+    def json_encoder(target) -> dict:
         """
         Converts Target to json
         """
         return {
             'start_time': target.start_time,
             'speed': target.speed,
-            'path': [
-                [p.latitude, p.longitude] for p in target.path
-            ]
+            'path': [{'latitude': p.latitude, 'longitude': p.longitude} for p in target.path]
         }
 
     @staticmethod
@@ -131,8 +129,14 @@ class Target:
         return Target(
             start_time=Timestamp(json_obj['start_time']),
             speed=float(json_obj['speed']),
-            path=[Point(*p) for p in json_obj['path']]
+            path=[Point(latitude=p['latitude'], longitude=p['longitude']) for p in json_obj['path']]
         )
+
+    def to_json(self) -> dict:
+        """
+        Convert object to JSON (dict)
+        """
+        return Target.json_encoder(self)
 
 
 class Sighting(BaseModel):

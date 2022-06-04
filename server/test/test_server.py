@@ -165,4 +165,6 @@ class TestServer(IsolatedAsyncioTestCase):
             if len(targets):
                 break
 
+        print([t.to_json() for t in targets])
+
         self.assertEqual(5, len(targets))

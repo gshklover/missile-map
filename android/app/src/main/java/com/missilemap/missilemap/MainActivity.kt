@@ -10,9 +10,10 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
-import android.location.LocationListener
+// import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.Looper
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -24,8 +25,12 @@ import com.android.volley.Request
 import com.google.android.gms.maps.*
 import com.google.android.gms.maps.model.*
 import com.android.volley.RequestQueue
+import com.android.volley.toolbox.JsonArrayRequest
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import com.google.android.gms.location.*
+// import com.google.android.gms.location.LocationListener
+import com.google.gson.*
 import org.json.JSONObject
 import kotlin.math.min
 
@@ -33,19 +38,47 @@ import kotlin.math.min
 val DEFAULT_ZOOM : Float = 10.0f   // default map zoom
 val UPDATE_RATE_MS : Long = 100    // minimum time (ms) between map updates
 val POST_URL = "http://10.0.2.2:8000/sightings"
+val GET_URL = "http://10.0.2.2:8000/targets"
+
+
+/**
+ * Geo-location
+ */
+class Point (
+    val latitude: Float,
+    val longitude: Float
+) {}
+
+/**
+ * Defines a target
+ */
+class Target (
+    val startTime: Int,
+    val speed: Float,
+    val path: Array<Point>
+) {}
+
+/**
+ * Configures a Gson object for REST api handling
+ */
+fun getGson(): Gson {
+    return Gson()
+}
 
 /**
  * Main application activity
  */
-class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener, OnMapReadyCallback {
+class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallback {
 
     // visual elements:
     private lateinit var mReportButton: Button    // "Report" button
     private lateinit var mMap: GoogleMap          // reference to google map object
     private lateinit var mMapPos: Marker          // current position marker on the map
     private var mLastUpdateTime: Long = 0         // last update time mMap
+    private var mTargets : Array<Target> = arrayOf()  // list of known targets
 
     // sensor readings:
+    private lateinit var mLocationClient: FusedLocationProviderClient // location client
     private val mGravity = FloatArray(3) { _ -> 0.0f }      // current accelerometer reading
     private val mGeomagnetic = FloatArray(3) { _ -> 0.0f }  // current magnetic sensor reading
     private var mLocation : Location? = null                     // current location
@@ -53,6 +86,7 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
 
     // handling requests:
     private lateinit var mRequestQueue : RequestQueue      // REST request queue
+    private lateinit var mLocationCallback: LocationCallback // location callback for FusedLocationClient
 
     // called when the activity is first created
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,6 +98,14 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
         mReportButton.isEnabled = false
 
         mRequestQueue = Volley.newRequestQueue(this)
+
+        mLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        val parent = this
+        mLocationCallback = object: LocationCallback() {
+            override fun onLocationResult(location: LocationResult) {
+                parent.onLocationResult(location)
+            }
+        }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
@@ -97,8 +139,10 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
         val sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
         sensorManager.unregisterListener(this)
 
-        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        locationManager.removeUpdates(this)
+        mLocationClient.removeLocationUpdates(mLocationCallback)
+
+//        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+//        locationManager.removeUpdates(this)
     }
 
     // called to populate options menu
@@ -120,9 +164,16 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
     }
 
     // called by LocationManager when location changes
-    override fun onLocationChanged(location: Location) {
+    /* override fun onLocationChanged(location: Location) {
         mReportButton.isEnabled = true
         mLocation = location
+        updateText()
+    }
+    */
+
+    fun onLocationResult(location: LocationResult) {
+        mReportButton.isEnabled = true
+        mLocation = location.lastLocation
         updateText()
     }
 
@@ -145,8 +196,13 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
             ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         ) {
-            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0.1f, this)
+            val locationRequest = LocationRequest.create()
+            locationRequest.interval = 1000
+            locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+            mLocationClient.requestLocationUpdates(locationRequest, mLocationCallback, Looper.getMainLooper())
+
+//            val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+//            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0.1f, this)
         }
     }
 
@@ -225,6 +281,11 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
         }
     }
 
+    // update list of targets
+    private fun updateTargets(targets: Array<Target>) {
+        mTargets = targets
+    }
+
     // called when the GoogleMap object is ready
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
@@ -272,8 +333,19 @@ class MainActivity : AppCompatActivity(), LocationListener, SensorEventListener,
         json.put("longitude", mLocation?.longitude)
         json.put("bearing",   mBearing)
 
-        val request = JsonObjectRequest(Request.Method.POST, url, json, null, {
-            error -> error.printStackTrace()
+        val request = JsonObjectRequest(Request.Method.POST, url, json, null) { error ->
+            error.printStackTrace()
+        }
+        mRequestQueue.add(request)
+    }
+
+    // update list of known targets on the map
+    private fun onUpdate() {
+        val url = GET_URL
+        val request = JsonArrayRequest(Request.Method.GET, url, null, { response ->
+            this.updateTargets(getGson().fromJson(response.toString(), Array<Target>::class.java))
+        }, { error ->
+            error.printStackTrace()
         })
         mRequestQueue.add(request)
     }
