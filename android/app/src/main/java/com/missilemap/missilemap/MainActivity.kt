@@ -74,9 +74,24 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
     // visual elements:
     private lateinit var mReportButton: Button    // "Report" button
     private lateinit var mMap: GoogleMap          // reference to google map object
-    private lateinit var mMapPos: Marker          // current position marker on the map
+    private var mMapPos: Marker? = null           // current position marker on the map
     private var mLastUpdateTime: Long = 0         // last update time mMap
     private var mTargetMarkers : Array<Polyline> = arrayOf() // list of markers used to render targets
+
+    // when "true" shows current map location
+    private var showLocation: Boolean = true
+        set(value) {
+            if (field == value) return
+
+            field = value
+            mMapPos = if (value) {
+                createPositionMarker()
+            } else {
+                mMapPos?.remove()
+                null
+            }
+            updateReportButton()
+        }
 
     // sensor readings:
     private lateinit var mLocationClient: FusedLocationProviderClient // location client
@@ -161,6 +176,8 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.action_showmap -> {
+                // toggle between showing a map vs showing the current location
+                showLocation = !showLocation
                 return true
             }
             else -> {
@@ -171,12 +188,12 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
 
     // called by LocationManager when location changes
     fun onLocationResult(location: LocationResult) {
-        mReportButton.isEnabled = true
         mLocation = location.lastLocation
 //        mLocation = Location(LocationManager.GPS_PROVIDER)
 //        mLocation?.latitude = 47.487079766379715
 //        mLocation?.longitude = 33.081535775384715
-        updateText()
+        updateMapPos()
+        updateReportButton()
     }
 
     // called by permissions manager to process permission change request
@@ -252,15 +269,15 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
             } else if (mBearing > pi) {
                 mBearing -= 2 * pi
             }
-            updateText()
+            updateMapPos()
         }
     }
 
     // not used
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
-    // update displayed text
-    private fun updateText() {
+    // update current map position
+    private fun updateMapPos() {
         val longitude = mLocation?.longitude
         val latitude = mLocation?.latitude
 
@@ -268,16 +285,16 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
             val currentTime = System.currentTimeMillis()
             if (currentTime < mLastUpdateTime || currentTime > mLastUpdateTime + MAP_UPDATE_RATE_MS) {
                 mLastUpdateTime = currentTime
-                val currentPos = mMap.cameraPosition
-                val newPos = CameraPosition(
-                    LatLng(latitude, longitude),
-                    currentPos.zoom,
-                    0f,
-                    Math.toDegrees(mBearing.toDouble()).toFloat()
-                )
-                mMap.moveCamera(CameraUpdateFactory.newCameraPosition(newPos))
-                if (::mMapPos.isInitialized) {
-                    mMapPos.position = LatLng(latitude, longitude)
+                if (showLocation) {
+                    val currentPos = mMap.cameraPosition
+                    val newPos = CameraPosition(
+                        LatLng(latitude, longitude),
+                        currentPos.zoom,
+                        0f,
+                        Math.toDegrees(mBearing.toDouble()).toFloat()
+                    )
+                    mMap.moveCamera(CameraUpdateFactory.newCameraPosition(newPos))
+                    mMapPos?.position = LatLng(latitude, longitude)
                 }
             }
         }
@@ -321,18 +338,23 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
             location.longitude = 47.0
         }
 
-        val markerSize = defaultMarkerSize()
-        val bitmapDescriptor = getBitmapDescriptor(R.drawable.center_marker, markerSize, markerSize * 2)
-        val marker = mMap.addMarker(
-            MarkerOptions().position(LatLng(location.latitude, location.longitude))
-                .icon(bitmapDescriptor).anchor(0.5f, 0.75f)
-        )
-        if (marker != null) {
-            mMapPos = marker
+        if (showLocation) {
+            mMapPos = createPositionMarker()
         }
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), DEFAULT_ZOOM));
 
         scheduleUpdate()
+    }
+
+    // create center position marker
+    private fun createPositionMarker(): Marker? {
+        val location = mLocation ?: Location(LocationManager.GPS_PROVIDER)
+        val markerSize = defaultMarkerSize()
+        val bitmapDescriptor = getBitmapDescriptor(R.drawable.center_marker, markerSize, markerSize * 2)
+        return mMap.addMarker(
+            MarkerOptions().position(LatLng(location.latitude, location.longitude))
+                .icon(bitmapDescriptor).anchor(0.5f, 0.75f)
+        )
     }
 
     // compute default marker size for the map
@@ -383,5 +405,9 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
             this.scheduleUpdate()
         })
         mRequestQueue.add(request)
+    }
+
+    private fun updateReportButton() {
+        mReportButton.isEnabled = mLocation != null && showLocation
     }
 }
