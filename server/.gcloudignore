@@ -1,0 +1,7 @@
+*.pyc
+__pycache__
+notebooks
+simulator
+clientapi
+test
+start.sh

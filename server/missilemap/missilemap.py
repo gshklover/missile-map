@@ -113,6 +113,12 @@ class MissileMap(AsyncServer):
         """
         return await self._storage.list_sightings()
 
+    async def clear_sightings(self):
+        """
+        Clear all sightings
+        """
+        return await self._storage.clear_sightings()
+
     async def list_targets(self) -> List[Target]:
         """
         Get current list of identified targets

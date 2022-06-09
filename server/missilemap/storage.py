@@ -42,6 +42,13 @@ class ISightingStorage(ABC):
         """
         raise NotImplementedError()
 
+    @abstractmethod
+    async def clear_sightings(self):
+        """
+        Clear all sightings
+        """
+        raise NotImplementedError()
+
 
 class MemoryStorage(ISightingStorage):
     """
@@ -79,6 +86,13 @@ class MemoryStorage(ISightingStorage):
         Get all sightings
         """
         return list(self._sightings.values())
+
+    async def clear_sightings(self):
+        """
+        Clear all sightings
+        """
+        self._checksum += 1
+        self._sightings.clear()
 
 
 class MongoDBStorage(ISightingStorage):
@@ -118,6 +132,13 @@ class MongoDBStorage(ISightingStorage):
         List stored sightings
         """
         return await self.db.find(model=Sighting)
+
+    async def clear_sightings(self):
+        """
+        Clear all sightings
+        """
+        self._checksum += 1
+        return await self.db.get_collection(Sighting).drop()
 
 
 def get_storage(url='mongodb://localhost:21017', database='missilemap') -> ISightingStorage:

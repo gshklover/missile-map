@@ -1,7 +1,7 @@
 """
 REST API server for MissileMap backend.
 
-Run:
+Run (dev mode):
     uvicorn server:app --reload
 
 Environment variables:
@@ -9,14 +9,13 @@ Environment variables:
 
 Config file structure:
     {
-        'testing': False,
-        'mongodb: {
-            'url': 'mongodb://localhost:21017',
-            'db_name': 'missilemap'
+        "testing": false,
+        "mongodb": {
+            "url": "mongodb://localhost:21017",
+            "db_name": "missilemap"
         }
     }
 """
-import geopy
 from fastapi import FastAPI, status
 from fastapi.encoders import jsonable_encoder
 import json
@@ -98,6 +97,15 @@ async def _post_sighting(sighting: Sighting):
     if not TESTING:
         sighting.timestamp = int(time.time())  # override timestamp
     return await core.add_sighting(sighting)
+
+
+if TESTING:
+    @app.delete('/sightings')
+    async def _post_delete():
+        """
+        Clear the sightings
+        """
+        return await core.clear_sightings()
 
 
 @app.get('/targets')

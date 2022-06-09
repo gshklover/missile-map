@@ -1,0 +1,12 @@
+# Python version to use:
+runtime: python310
+
+# instance class to use for the service:
+instance_class: B2
+
+# environment variables:
+env_variables:
+  MISSILEMAP_CONFIG: "config.json"
+
+# command to run the service:
+entrypoint: uvicorn --port 8080 server:app

@@ -49,11 +49,17 @@ class ClientAPI:
             Target.json_decoder(t) for t in self._get('/targets')
         ]
 
-    # def list_sightings(self) -> List[Sighting]:
-    #     """
-    #     List all sightings
-    #     """
-    #     return [Sighting(**d) for d in self._get('/sightings')]
+    def list_sightings(self) -> Sequence[Sighting]:
+        """
+        List all sightings (TESTING mode only)
+        """
+        return [Sighting(**d) for d in self._get('/sightings')]
+
+    def clear_sightings(self):
+        """
+        Clear all sightings (TESTING mode only)
+        """
+        return self._delete('/sightings')
 
     def _post(self, endpoint, json=None, params=None) -> dict:
         """
@@ -80,6 +86,20 @@ class ClientAPI:
         """
         url = urllib.parse.urljoin(self._base_url, endpoint)
         resp = self._session.get(url, params=params)
+        if resp.status_code not in (HTTPStatus.OK,):
+            raise Exception(f"Bad request status: {resp.status_code}, content: {resp.text}")
+        return resp.json()
+
+    def _delete(self, endpoint, params=None) -> dict:
+        """
+        Perform DELETE request to specified endpoint
+
+        :param endpoint: relative endpoint path
+        :param params: query parameters
+        :return: result as JSON object, an exception is raised if result code is an error
+        """
+        url = urllib.parse.urljoin(self._base_url, endpoint)
+        resp = self._session.delete(url, params=params)
         if resp.status_code not in (HTTPStatus.OK,):
             raise Exception(f"Bad request status: {resp.status_code}, content: {resp.text}")
         return resp.json()
