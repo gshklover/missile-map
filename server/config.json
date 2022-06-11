@@ -1,5 +1,6 @@
 {
       "testing": false,
+      "db_type": "memory",
       "mongodb": {
           "url": "mongodb://localhost:21017",
           "db_name": "missilemap"

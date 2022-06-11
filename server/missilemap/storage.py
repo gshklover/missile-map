@@ -141,13 +141,20 @@ class MongoDBStorage(ISightingStorage):
         return await self.db.get_collection(Sighting).drop()
 
 
-def get_storage(url='mongodb://localhost:21017', database='missilemap') -> ISightingStorage:
+def get_storage(db_type="mongodb", url='mongodb://localhost:21017', database='missilemap') -> ISightingStorage:
     """
     Get model storage backend.
 
+    :param db_type: DB type. One of: "mongodb", "memory"
     :param url: MongoDB URL (default: mongodb://localhost:27017)
     :param database: database name to use
     """
-    # object database
-    client = AsyncIOMotorClient(url)
-    return MongoDBStorage(db=AIOEngine(motor_client=client, database=database))
+    if db_type == 'mongodb':
+        # object database
+        client = AsyncIOMotorClient(url)
+        return MongoDBStorage(db=AIOEngine(motor_client=client, database=database))
+    elif db_type == 'memory':
+        return MemoryStorage()
+    else:
+        raise ValueError(f'Unknown DB type: {db_type}')
+

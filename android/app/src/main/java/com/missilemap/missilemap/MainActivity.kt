@@ -85,8 +85,20 @@ class MainActivity : AppCompatActivity(), SensorEventListener, OnMapReadyCallbac
 
             field = value
             mMapPos = if (value) {
+                // create a marker for the center:
                 createPositionMarker()
             } else {
+                // update orientation to point North:
+                if (::mMap.isInitialized) {
+                    val currentPos = mMap.cameraPosition
+                    val newPos = CameraPosition(
+                        currentPos.target,
+                        currentPos.zoom,
+                        0f,
+                        0f
+                    )
+                    mMap.moveCamera(CameraUpdateFactory.newCameraPosition(newPos))
+                }
                 mMapPos?.remove()
                 null
             }

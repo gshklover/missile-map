@@ -10,6 +10,7 @@ Environment variables:
 Config file structure:
     {
         "testing": false,
+        "db_type": "mongodb",
         "mongodb": {
             "url": "mongodb://localhost:21017",
             "db_name": "missilemap"
@@ -65,9 +66,10 @@ app = FastAPI(
 # ======================
 # Initialize DB storage:
 # ======================
+db_type = config.get('db_type', 'mongodb')
 db_url = config.get('mongodb', {}).get('url', DEFAULT_DB_URL)
 db_name = config.get('mongodb', {}).get('db_name', DEFAULT_DB_NAME)
-storage = get_storage(url=db_url, database=db_name)  # odmantic object storage
+storage = get_storage(db_type=db_type, url=db_url, database=db_name)  # odmantic object storage
 
 # ===================================
 # Initialize core application logic:
